@@ -100,7 +100,7 @@ var App = {
             info:       { name: 'info',         title: 'Info',              icon: 'fa-question',                show: 'toolShowInfo' },
             settings:   { name: 'settings',     title: 'Settings',          icon: 'fa-gears',                   show: 'toolShowSettings' },
             logout:     { name: 'logout',       title: 'Logout',            icon: 'fa-sign-out',                show: 'toolShowLogout' }
-        }        
+        }    
     },
     serverVars: {
         chat_max: -1,
@@ -125,6 +125,15 @@ var App = {
 		timestamps: true
 	}
 };
+
+/** 
+ * Global
+ */
+
+function throwError(message){
+    console.log(message);
+    pushFeedItem('error', message);
+}
 
 /**
  * Channels ========================================================================================================================
@@ -197,12 +206,14 @@ function joinChannel(name){
 }
 
 function openChannel(name){
+    console.log("Opening channel: " + name);
+    
     // Is this channel already open?
     if(App.state.openChannels.indexOf(name) !== -1){
-        // Do nothing
+        throwError('Trying to open a channel that is already open.');
         return;
     }
-    
+        
     // Is this a public or private channel?
     var isPublic = name.substr(0, 3) !== 'ADH';
     
@@ -225,15 +236,21 @@ function openChannel(name){
     
     if(typeof channels[name].buttonDom === 'undefined'){
         var domButton = $('<div class="fabutton" title="' + channels[name].title + '"><span id="data" title="' + name + '"></span><span class="fa fa-th"></span></div>');
-        channels[name].buttonDom = domButton;
-        App.dom.openChannelList.append(domButton);
-        domButton.click(function(){
-            var channelName = $(this).find('#data').attr('title');
-            selectChannel(channelName);
-        });
+        channels[name].buttonDom = domButton; 
     }
     
-    // Fill the doms with stored information.
+    // Append the dom button to the channel list.
+    App.dom.openChannelList.append(channels[name].buttonDom);
+    
+    // Add the click listener to the dom button
+    channels[name].buttonDom.click(function(){
+        console.log("clicky");
+        var channelName = $(this).find('#data').attr('title');
+        selectChannel(channelName);
+    });     
+    
+    // (Re)Create the userlist
+    channels[name].userlistDom.empty(); 
     for(var i = 0; i < channels[name].users.length; i++){
         var dom = createDomUserEntry(channels[name].users[i]);
         channels[name].userlistDom.append(dom);
@@ -242,6 +259,52 @@ function openChannel(name){
     // If no channel is selected, select this one
     if(App.state.selectedChannel == ''){
         selectChannel(name);
+    }
+}
+
+function leaveChannel(name){
+    sendMessageToServer('LCH { "channel": "' + name + '" }');
+}
+
+function closeChannel(name){
+    // If this channel isn't in the list of open channels.
+    if(App.state.openChannels.indexOf(name) === -1){
+        console.log("Trying to close a channel that isn't open.");
+        pushFeedItem('error', 'Tried to close channel ' + name + ' when it isn\'t open.');
+        return;
+    }
+    
+    // Was the channel public?
+    var isPublic = name.substr(0, 3) !== 'ADH';
+    var channels = isPublic ? App.publicChannels : App.privateChannels;
+    
+    // Get the index of our button in the list of buttons.
+    var removeIndex = App.state.openChannels.indexOf(name);
+    
+    // Remove doms.
+    channels[name].buttonDom.remove();
+    channels[name].messageDom.remove();
+    channels[name].userlistDom.remove();
+    
+    // remove form open channel list
+    App.state.openChannels.splice(removeIndex, 1);
+    
+    // If there are no channels to move to show the no channel stuff.
+    if(App.state.openChannels.length == 0){
+        App.dom.noChannelImage.show();
+        App.dom.userlistTopBar.hide();
+        App.state.selectedChannel = '';
+    }
+    else {
+        // what channel should we select next?
+        removeIndex -= 1;
+        if(removeIndex < 0) removeIndex = 0;
+        
+        // get the button dom
+        var newChannelName = App.state.openChannels[removeIndex];
+        
+        // Select the channel
+        selectChannel(newChannelName);
     }
 }
 
@@ -724,8 +787,10 @@ function createDomMain(){
                     domUserListTopBar.append(domUserListTitle);
                     App.dom.userlistTitle = domUserListTitle;
                     
-                    domUserListTopBar.append('<span id="userlistclosebutton" class="famuted fa fa-remove" title="Close Channel"></span>');
-        
+                    var domUserListCloseButton = $('<span id="userlistclosebutton" class="famuted fa fa-remove" title="Close Channel"></span>');
+                    domUserListTopBar.append(domUserListCloseButton);
+                    domUserListCloseButton.click(createUserListCloseButtonClickCallback());
+                                
                 var domUserListScroller = $('<div class="userlistscroller"></div>');
                 domUserList.append(domUserListScroller);
                 App.dom.userlist = domUserListScroller;
@@ -745,6 +810,12 @@ function createDomMain(){
             
     
     return domMain;    
+}
+
+function createUserListCloseButtonClickCallback(){
+    return function(){
+        leaveChannel(App.state.selectedChannel);
+    }
 }
 
 function createDomMainMenu(){
@@ -924,6 +995,9 @@ function createDomToolFeedMessage(type, message){
         case 'info':
             typeText = getHumanReadableTimestampForNow();
             break;
+        case 'error':
+            typeText = 'Error';
+            break;
     }
     
     
@@ -942,6 +1016,13 @@ function createDomToolFeedMessage(type, message){
     // Message
     var msg = $('<div class="feedmessagemessage">' + message + '</div>');
     domMsg.append(msg);
+    
+    // Extra classes
+    switch(type){
+        case 'error':
+            domMsg.addClass('error');
+            break;
+    }
     
     // return 
     return domMsg;
@@ -1024,7 +1105,7 @@ function parseServerMessage(message){
         var obj = JSON.parse(message.substr(3));
     }
     
-    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'CON', 'FRL', 'IGN', 'ADL', 'LIS', 'UPT', 'CHA', 'ICH', 'CDS', 'COL'];    
+    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL'];    
     if(dontLog.indexOf(tag) === -1){
         console.log(message);
     }
@@ -1125,6 +1206,7 @@ function parseServerMessage(message){
             break;
         case 'ICH':
             // Initial channel data. Received in response to JCH along with CDS. (userlist, channelname, mode)
+            console.log("ICH: " + obj.channel);
             
             // Is this channel public or private?
             var isPublic = obj.channel.substr(0, 3) !== 'ADH';
@@ -1180,6 +1262,9 @@ function parseServerMessage(message){
             break;
         case 'LCH':
             // Indicates that the given user has left the given channel. This may also be the client's character.
+            if(obj.character === App.user.loggedInAs){
+                closeChannel(obj.channel);
+            }
             break;
         case 'LIS':
             // Receives an array of all the online characters and their gender, status and status msg. (often sent in batches. Use CON to know when we have them all)

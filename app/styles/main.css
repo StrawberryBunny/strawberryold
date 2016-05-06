@@ -304,6 +304,14 @@ html, body {
     font-size: 24px;
 }
 
+.error {
+    background-color: #602c2e;
+}
+
+.error .feedtitle {
+    color: #ea4933;
+}
+
 /* Tool Panel - Status */
 
 #statusavatar {
