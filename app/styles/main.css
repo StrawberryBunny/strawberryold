@@ -236,6 +236,22 @@ html, body {
     display: flex;
 }
 
+/* All Tools */
+.tooltopbar {
+    background-color: #444444;
+    height: 48px;
+    width: 100%;
+    font-size: 36px;
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    padding-right: 10px;
+}
+
+.tooltopbar .fa {
+    margin-left: 20px;
+}
+
 /* Tool Panel - Console */
 .toolconsolescroller {
     overflow-y: auto;
@@ -257,6 +273,44 @@ html, body {
     background-color: #333333;
 }
 
+/* Tool - Feed */
+.toolfeedscroller {
+    overflow-y: auto;
+    overflow-x: hidden;
+    word-wrap: break-word;
+    height: 100%;
+}
+
+.toolfeedmessages {
+    padding: 5px;
+}
+
+.feedmessage {
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    margin-bottom: 5px;
+    background-color: #333333;
+}
+
+.feedmessagetopbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #555555;
+    font-weight: bold;
+    font-size: 18px;
+    margin-bottom: 5px;
+}
+
+.feedmessagemessage {
+    
+}
+
+.feedmessage .famuted {
+    font-size: 24px;
+}
 
 /* Tool Panel - Status */
 
@@ -288,7 +342,36 @@ html, body {
     justify-content: space-between;
 }
 
+/* Tool - ChannelList */
+
+.toolchannellistscroller {
+    overflow-y: auto;
+    height: calc(100% - 48px);
+}
+
+.channellistentry {
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    justify-content: space-between;
+    background-color: #333333;
+}
+
+.channellistentry:nth-of-type(odd) {
+    background-color: #222222;
+}
+
+.channellistentry:hover {
+    background-color: #ea4933;
+}
+
+
+
 /* Global */
+
+.avatar {
+    margin: 5px;
+}
 
 .errorlink {
     cursor: pointer;
@@ -311,4 +394,22 @@ html, body {
 
 .fabuttonselected {
     background-color: #222222;
+}
+
+.faicon {
+    cursor: pointer;
+    color: #c7c7c7;
+}
+
+.faicon:hover {
+    color: #ea4933;
+}
+
+.famuted {
+    cursor: pointer;
+    color: #555555;
+}
+
+.famuted:hover {
+    color: #ea4933;
 }

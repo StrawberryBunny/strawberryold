@@ -6,14 +6,21 @@
 
 var App = {
     connection: null, // The WebSocket connection
+    characters: {},
+    ops: [],
+    publicChannels: {},
+    privateChannels: {},
     user: { // Collection for items related to the user.
         account: '',            // String (account name)
         ticket: '',             // String (the api ticket aquired at log in)
         characters: [],         // Array of String (character names)
-        loggedInAs: ''
+        loggedInAs: '',
+        ignoreList: []
     },
     state: { // Collection of items related to the dom
-        currentTool: ''
+        currentTool: '',
+        loggedInCount: -1, // The user count at log in.
+        listedCount: 0
     },
     tools: { // A place to store things for each tool: (all tools have a button and content entry for their respective dom elements.) 
         console: {    
@@ -21,6 +28,25 @@ var App = {
             scroller: null, // The dom that needs to scroll 
             messagePush: null, // The dom to append new messages too. (child of the scroller)
             queue: [] // A queue of messages that haven't been displayed yet.
+        },
+        status: {
+            dropdown: null,
+            textarea: null,
+            updatebutton: null
+        },
+        channels: {
+            entryPush: null,
+            refreshbutton: null,
+            channelEntries: []
+        },
+        feed: {
+            currentlyDisplaying: false,
+            scroller: null,
+            messagePush: null,
+            queue: [],
+            filterPMs: null,
+            filterMentions: null,
+            filterAlerts: null            
         }
     },
     consts: {
@@ -61,12 +87,12 @@ var App = {
             ]      
         },
         tools: {
-            console:    { name: 'console',      title: 'Console',           icon: 'fa-exclamation-triangle',    show: 'toolShowConsole' }, 
+            console:    { name: 'console',      title: 'Console',           icon: 'fa-desktop',                 show: 'toolShowConsole' }, 
             status:     { name: 'status',       title: 'Status',            icon: 'fa-list-alt',                show: 'toolShowStatus' },
             channels:   { name: 'channels',     title: 'Channel List',      icon: 'fa-th',                      show: 'toolShowChannelList' },
             viewer:     { name: 'viewer',       title: 'Viewer',            icon: 'fa-eye',                     show: 'toolShowViewer' },
             friends:    { name: 'friends',      title: 'Friends',           icon: 'fa-users',                   show: 'toolShowFriends' },
-            pms:        { name: 'pms',          title: 'Private Messages',  icon: 'fa-weixin',                  show: 'toolShowPMs' },
+            pms:        { name: 'pms',          title: 'Private Messages',  icon: 'fa-comments',                show: 'toolShowPMs' },
             feed:       { name: 'feed',         title: 'Feed',              icon: 'fa-feed',                    show: 'toolShowFeed' },
             info:       { name: 'info',         title: 'Info',              icon: 'fa-question',                show: 'toolShowInfo' },
             settings:   { name: 'settings',     title: 'Settings',          icon: 'fa-gears',                   show: 'toolShowSettings' },
@@ -94,13 +120,22 @@ function pushMessageToConsole(message){
     // Get the current time so we can timestamp this messge.
     var timestamp = getHumanReadableTimestampForNow();
     
-    // Push this message into the message queue
-    App.tools['console'].queue.push('<b>' + timestamp + '</b> ' + message);
+    // Process BBCODE
+    var bb = XBBCODE.process({
+        text: message
+    });
     
-    // If the console is open, push the message immediately.
+    // Push this message into the message queue
+    App.tools['console'].queue.push('<b>' + timestamp + '</b><br/>' + bb.html);
+    
+    // If the console is open, display the message immediately.
     if(App.state.currentTool === 'console' && App.tools['console'].currentlyDisplaying === false){
         displayQueuedConsoleMessages();
     }
+    
+    
+    // TEST Also to feed
+    pushFeedItem('console', message);
 }
 
 function displayQueuedConsoleMessages(){
@@ -109,8 +144,8 @@ function displayQueuedConsoleMessages(){
          return;
     }
     
-    App.tools['console'].currentlyDisplaying = true;            
     if(App.tools['console'].queue.length > 0){
+        App.tools['console'].currentlyDisplaying = true;
         displayNextConsoleMessage(true);
     }
 }
@@ -159,6 +194,126 @@ function createNextConsoleMessageTimeoutCallback(iterate){
     };
 }
 
+/* Status */
+function updateStatusForm(){
+    App.tools.status.dropdown.val(App.characters[App.user.loggedInAs].status);
+    App.tools.status.textarea.val(App.characters[App.user.loggedInAs].statusmsg);
+}
+
+/* Channel List */
+function refreshChannels(){
+    // Start the refesh button spinning
+    App.tools['channels'].refreshbutton.addClass('fa-spin');
+    
+    // Send request message
+    sendMessageToServer('CHA');
+}
+
+function channelListUpdated(){ // Called from parseServerMessage() when the channel list has been updated
+    // Stop the refresh button spinning
+    App.tools['channels'].refreshbutton.removeClass("fa-spin");
+    
+    // Clear any existing channel entries
+    App.tools['channels'].entryPush.empty();
+    App.tools['channels'].channelEntries = [];
+    
+    // Sort the entries
+    var list = [];
+    for(var key in App.publicChannels){
+        list.push(key);
+    }
+    list.sort();   
+    
+    // Create entries for each channel
+    for(var i = 0; i < list.length; i++){
+        var dom = createDomChannelListEntry(App.publicChannels[list[i]].name, App.publicChannels[list[i]].characterCount);
+        App.tools['channels'].entryPush.append(dom);
+    }
+}
+
+/* Feed */
+function pushFeedItem(type, message){
+    var bb = XBBCODE.process({
+        text: message
+    });
+    
+    var fullMessage = '';
+    
+    switch(type){
+        case 'console':
+            fullMessage += '<p><b>' + getHumanReadableTimestampForNow() + '</b></p>';
+            break;
+    }
+    
+    fullMessage += bb.html;
+    
+    // Process BBCODE
+    
+        
+    // Push message into queue
+    App.tools['feed'].queue.push([type, fullMessage]);
+    
+    // If the feed is open, display the message immediately.
+    if(App.state.currentTool == 'feed' && App.tools['feed'].currentlyDisplaying === false){
+        displayQueuedFeedMessages();
+    }
+}
+
+function displayQueuedFeedMessages(){
+    // if we're already displaying, don't bother
+    if(App.tools['feed'].currentlyDisplaying){
+        return;
+    }
+    
+    if(App.tools['feed'].queue.length > 0){
+        App.tools['feed'].currentlyDisplaying = true;
+        displayNextFeedMessage(true);
+    }
+    
+}
+
+function displayNextFeedMessage(iterate){
+    // Get scroller
+    var domScroller = App.tools['feed'].scroller;
+    var domMessageContainer = App.tools['feed'].messagePush;
+    
+    // Is the scrollbar at the bottom?
+    var autoScroll = domScroller.scrollTop() >= domScroller[0].scrollHeight - domScroller.height();
+    
+    // Create dom
+    var feedEntry = App.tools['feed'].queue.shift();
+    var domMsg = createDomToolFeedMessage(feedEntry[0], feedEntry[1]);
+    
+    // Append dom to feed content.
+    App.tools['feed'].messagePush.append(domMsg);
+    
+    // Fade in new message
+    domMsg.hide();
+    domMsg.fadeIn(1000);
+    
+    // if the scrollbar is already at the bottom..Scroll down the feed to the new message
+    if(autoScroll){
+        App.tools['feed'].scroller.stop();
+        App.tools['feed'].scroller.animate({
+            scrollTop: App.tools['feed'].messagePush.height()
+        }, 1000);
+    }
+    
+    // If iterate
+    if(iterate && App.tools['feed'].queue.length > 0){
+        setTimeout(createNextFeedMessageTimeoutCallback(iterate), 800);
+    }
+    else {
+        App.tools['feed'].currentlyDisplaying = false;
+    }
+}
+
+function createNextFeedMessageTimeoutCallback(iterate){
+    return function(){
+        displayNextFeedMessage(iterate);
+    };
+}
+
 /**
  * Tool Show Functions ==========================================================================================================
  */
@@ -168,12 +323,15 @@ function toolShowConsole(){
 }
 
 function toolShowStatus(){
-    
+    // Update the form to match our currently maintained status.
+    updateStatusForm();
 }
 
-/*
 function toolShowChannelList(){
-    
+    // If we don't already have a channel list, fetch one automatically
+    if(App.tools['channels'].entryPush.children().length == 0){
+        refreshChannels();
+    }
 }
 
 function toolShowViewer(){
@@ -189,7 +347,7 @@ function toolShowPMs(){
 }
 
 function toolShowFeed(){
-    
+    displayQueuedFeedMessages();
 }
 
 function toolShowInfo(){
@@ -203,11 +361,34 @@ function toolShowSettings(){
 function toolShowLogout(){
     
 }
-*/
+
 
 /** 
  * Layout & Navigation  =========================================================================================================
  */
+
+function logInComplete(character){
+    // Set logged in user
+    App.user.loggedInAs = character;
+    
+    // Set the loading texts
+    $('#loadingtext').text('Identification successful.');
+    $('#loadingtext2').text('Enjoy using Strawberry!');
+    
+    // Replace hand
+    $('.loginloadingcontent span').removeClass();
+    var rpslz = [ 'fa-hand-rock-o', 'fa-hand-paper-o', 'fa-hand-scissors-o', 'fa-hand-lizard-o', 'fa-hand-spock-o'];
+    $('.loginloadingcontent span').addClass('fa ' + rpslz[Math.floor(Math.random() * rpslz.length)]);
+    $('.loginloadingcontent span').attr('title', 'SCISSORS cuts PAPER covers ROCK crushes LIZARD poisons SPOCK smashes SCISSORS decapitates LIZARD eats PAPER disproves SPOCK vaporizes ROCK crushes SCISSORS');
+    
+    // Request server information
+    sendMessageToServer('UPT');
+    
+    // Push message
+    pushMessageToConsole('Logged in as [icon]' + character + '[/icon]');
+    
+    // Wait for rest of server data to be brought down.
+}
 
 function toggleTool(toolName){
     if(App.state.currentTool === toolName){
@@ -450,6 +631,8 @@ function createDomMainChat(){
     
     createDomToolConsole();
     createDomToolStatus();    
+    createDomToolChannelList();
+    createDomToolFeed();
         
     return domChatContainer;
 }
@@ -562,26 +745,146 @@ function createDomToolStatus(){
     
     // Top content (avatar / dropdown + messagebox)
     var domContent = $('<div id="toolstatuscontenttop"></div>');
-        
-    domContent.append('<img id="statusavatar" class="img-rounded" src="https://static.f-list.net/images/avatar/strawberry.png" title="Strawberry"/>');
     
-    domContent.append('<div id="statusform"><select id="statusdd" name="status"><option value="online">Online</option><option value="looking">Looking</option><option value="busy">Busy</option><option value="away">Away</option><option value="dnd">DND</option></select><textarea id="statusmessage"></textarea></div>');
+    var domAvatar = $('<img id="statusavatar" class="img-rounded" src="https://static.f-list.net/images/avatar/strawberry.png" title="Strawberry"/>');
+    domContent.append(domAvatar);    
+    
+    var domFormContainer = $('<div id="statusform"></div>');
+    domContent.append(domFormContainer);
+    
+    var domDropDown = $('<select id="statusdd" name="status"><option value="online">Online</option><option value="looking">Looking</option><option value="busy">Busy</option><option value="away">Away</option><option value="dnd">DND</option></select>');
+    domFormContainer.append(domDropDown);
+    
+    var domTextArea = $('<textarea id="statusmessage"></textarea>');
+    domFormContainer.append(domTextArea);
     
     // Append
     App.tools['status'].content.append(domContent);
     
     // bottom content
     var botContent = $('<div id="toolstatuscontentbottom"></div>');
-    
-    botContent.append('<button id="btnstatusreset" type="submit" class="btn btn-default">Reset</button><button id="btnstatusupdate" type="submit" class="btn btn-default">Update</button>');
-    
-    // reset sets the form content back to whatever our status is current set to.
-    
-    // update, updates the server with a new status.
-    
-    // Append
     App.tools['status'].content.append(botContent);
+    
+    var btnReset = $('<button id="btnstatusreset" type="submit" class="btn btn-default">Reset</button>');
+    botContent.append(btnReset);
+    btnReset.click(function(){
+        updateStatusForm();
+    });
+    
+    var btnUpdate = $('<button id="btnstatusupdate" type="submit" class="btn btn-default">Update</button>');
+    botContent.append(btnUpdate);
+    btnUpdate.click(function(){
+        // Send Message
+        sendMessageToServer('STA { "status": "' + App.tools['status'].dropdown.val() + '", "statusmsg": "' + App.tools['status'].textarea.val() + '" }');
+        
+        // Disable Update button
+        App.tools['status'].updatebutton.addClass('disabled');
+        
+        // Timeout
+        setTimeout(function(){
+            App.tools['status'].updatebutton.removeClass('disabled');
+        }, 5000);
+    });
+    
+    // store
+    App.tools['status'].dropdown = domDropDown;
+    App.tools['status'].textarea = domTextArea;
+    App.tools['status'].updatebutton = btnUpdate;
 }
+
+function createDomToolChannelList(){
+    // Title Bar
+    var domTitleBar = $('<div class="tooltopbar"></div>');
+    App.tools['channels'].content.append(domTitleBar);
+    
+    // buttons
+    var btnNew = $('<span class="faicon fa fa-plus" title="New Channel"></span>');
+    domTitleBar.append(btnNew);
+    
+    var btnRefresh = $('<span class="faicon fa fa-refresh" title="Refresh"></span>');
+    domTitleBar.append(btnRefresh);
+    App.tools['channels'].refreshbutton = btnRefresh;
+    btnRefresh.click(function(){
+        refreshChannels();
+    });
+    
+    // Scroller   
+    var domScroller = $('<div class="toolchannellistscroller"></div>');
+    App.tools['channels'].content.append(domScroller);
+    
+    // Push
+    var domEntryPush = $('<div class="toolchannellistentries"></div>');
+    domScroller.append(domEntryPush);
+    App.tools['channels'].entryPush = domEntryPush;
+}
+
+function createDomChannelListEntry(channelName, characterCount){
+    var domContainer = $('<div class="channellistentry"></div>');
+    
+    var domRoomName = $('<div>' + channelName + '</div>');
+    domContainer.append(domRoomName);
+    
+    var domCharCount = $('<div>' + characterCount + '</div>');
+    domContainer.append(domCharCount);
+        
+    return domContainer;
+}
+
+function createDomToolFeed(){
+    var domTitleBar = $('<div class="tooltopbar"></div>');
+    App.tools['feed'].content.append(domTitleBar);
+    
+    // buttons
+    var btnFilterPM = $('<span class="faicon fa fa-comments" title="Turn off PMs"></span>');
+    domTitleBar.append(btnFilterPM);
+    
+    var btnFilterMentions = $('<span class="faicon fa fa-commenting" title="Turn off Mentions"></span>');
+    domTitleBar.append(btnFilterMentions);
+    
+    var btnFilterAlerts = $('<span class="faicon fa fa-exclamation-triangle" title="Turn off Alerts"></span>');
+    domTitleBar.append(btnFilterAlerts);
+    
+    // scroller
+    var domScroller = $('<div class="toolfeedscroller"></div>');
+    App.tools['feed'].content.append(domScroller);    
+    App.tools['feed'].scroller = domScroller;
+    
+    // Push
+    var domMessages = $('<div class="toolfeedmessages"></div>');
+    domScroller.append(domMessages);
+    App.tools['feed'].messagePush = domMessages;
+}
+
+function createDomToolFeedMessage(type, message){
+    // Create a message dom for this message.
+    var domMsg = $('<div class="feedmessage"></div>');
+        
+    // Top bar    
+    var topBar = $('<div class="feedmessagetopbar"></div>');
+    domMsg.append(topBar);
+    
+    // Title
+    var title = $('<span class="feedtitle">' + type + '</span>');
+    topBar.append(title);
+        
+    // Close button
+    var btnClose = $('<span class="famuted fa fa-times"></div>');
+    topBar.append(btnClose);   
+    btnClose.click(function(){
+        $(this).parent().parent().slideUp("slow", function(){
+            $(this).remove();
+        });
+    });
+    
+    // Message
+    var msg = $('<div class="feedmessagemessage">' + message + '</div>');
+    domMsg.append(msg);
+    
+    // return 
+    return domMsg;
+}
+
+/* Others */
 
 function createDomAlert(message){
     return $('<div class="alert alert-danger fade in"><a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a><strong>Error!</strong> ' + message + '</div>');
@@ -628,31 +931,51 @@ function openWebSocket(account, ticket, characterName){
 
 function parseServerMessage(message){
     var tag = message.substr(0, 3);
-    
-    pushMessageToConsole(message);
-        
+           
     if(message.length > 3){
         var obj = JSON.parse(message.substr(3));
+    }
+    
+    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'CON', 'FRL', 'IGN', 'ADL', 'LIS', 'UPT'];    
+    if(dontLog.indexOf(tag) === -1){
+        console.log(message);
     }
         
     switch(tag){
         case 'ADL':
             // Receives the current list of chatops
+            App.ops = obj.ops;
             break;
         case 'AOP':
             // The given character has been promoted to chatop.
             break;
         case 'BRO':
             // Incoming admin broadcast
+            pushMessageToConsole('<b>Admin Broadcast</b>: ' + obj.message);
             break;
         case 'CDS':
             // A channel's description has changed. (Also sent in response to JCH)
             break;
         case 'CHA':
             // Receiving a list of all public channels.
+            
+            // Update our list of channels.
+            for(var i = 0; i < obj.channels.length; i++){
+                if(typeof App.publicChannels[obj.channels[i].name] === 'undefined'){
+                    App.publicChannels[obj.channels[i].name] = {};
+                }
+                
+                App.publicChannels[obj.channels[i].name].name = obj.channels[i].name;
+                App.publicChannels[obj.channels[i].name].mode = obj.channels[i].mode;
+                App.publicChannels[obj.channels[i].name].characterCount = obj.channels[i].characters;
+            }            
+            
+            // Inform dom
+            channelListUpdated();
             break;
         case 'CIU':
             // Receiving an invite to a channel.
+            pushMessageToConsole(obj.sender + ' has invited you to ' + obj.title);
             break;
         case 'CBU':
             // Removes a user from a channel and prevents them from entering. (This just happened or.. what?)
@@ -669,6 +992,7 @@ function parseServerMessage(message){
         case 'CON':
             // The number of connected users. Received after connecting and identifying.
             pushMessageToConsole('There are currently ' + obj.count + ' users logged in.');
+            App.state.loggedInCount = obj.count;
             break;
         case 'COR':
             // Removes a channel operator.
@@ -699,6 +1023,10 @@ function parseServerMessage(message){
             break;
         case 'FLN':
             // Send by the server to inform the client that a given character went offline.
+            App.characters[obj.character].status = 'offline';
+            break;
+        case 'FRL':
+            // Initial friends list.
             break;
         case 'HLO':
             // Server hello command. Tells which server version is running and who wrote it.
@@ -709,35 +1037,26 @@ function parseServerMessage(message){
             break;
         case 'IDN':
             // Used to inform the client their identification is successful and handily sends their character name along with it.
-            
-            // Set logged in user
-            App.user.loggedInAs = obj.character;
-            
-            // Set the loading texts
-            $('#loadingtext').text('Identification successful.');
-            $('#loadingtext2').text('Enjoy using Strawberry!');
-            
-            // Replace hand
-            $('.loginloadingcontent span').removeClass();
-            var rpslz = [ 'fa-hand-rock-o', 'fa-hand-paper-o', 'fa-hand-scissors-o', 'fa-hand-lizard-o', 'fa-hand-spock-o'];
-            $('.loginloadingcontent span').addClass('fa ' + rpslz[Math.floor(Math.random() * rpslz.length)]);
-            $('.loginloadingcontent span').attr('title', 'SCISSORS cuts PAPER covers ROCK crushes LIZARD poisons SPOCK smashes SCISSORS decapitates LIZARD eats PAPER disproves SPOCK vaporizes ROCK crushes SCISSORS');
-            
-            // Request server information
-            sendMessageToServer('UPT');
-            
-            // Initiate a short delay
-            setTimeout(function(){
-                // Remove login loading content
-                $('.maincontainer').remove();
-                
-                // Switch to the chat.
-                $('body').append(createDomMainChat());
-            }, 1500);
-                        
+            logInComplete(obj.character);            
             break;
         case 'IGN':
             // Handles the ignore list
+            switch(obj.action){
+                case 'init': // The initial ignore list.
+                    App.user.ignoreList = obj.characters;
+                    break;
+                case 'add': // Acknoledges the addition of an ignore.
+                    break;
+                case 'delete': // Acknoledges the deletion of an ignore.
+                    break;
+                case 'list': // ?
+                    pushMessageToConsole('Received an IGN with action: list');
+                    break;
+                case 'notify': // ?
+                    pushMessageToConsole('Received an IGN with action: notify');
+                    break;
+            }
+            
             break;
         case 'JCH':
             // Indicates the given user has joined the given channel. This my also be the client's character.
@@ -749,13 +1068,36 @@ function parseServerMessage(message){
             // Indicates that the given user has left the given channel. This may also be the client's character.
             break;
         case 'LIS':
-            // Sends an array of all the online characters and their gender, status and status msg. (often sent in batches. Use CON to know when we have them all)
+            // Receives an array of all the online characters and their gender, status and status msg. (often sent in batches. Use CON to know when we have them all)
+            for(var i = 0; i < obj.characters.length; i++){
+                App.characters[obj.characters[i][0]] = {
+                    gender: obj.characters[i][1],
+                    status: obj.characters[i][2],
+                    statusmsg: obj.characters[i][3]
+                };
+                App.state.listedCount++;
+            }    
+            
+            pushMessageToConsole('Received character payload of ' + obj.characters.length + ' character' + (obj.characters.length > 1 ? 's' : '') + '.');
+            
+            // If the amount of characters now matches or is greater than con, we've received the full user list.
+            if(App.state.listedCount >= App.state.loggedInCount){
+                // All received.
+                // Remove login loading content
+                $('.maincontainer').remove();
+                    
+                // Switch to the chat.
+                $('body').append(createDomMainChat());
+            }
+                    
             break;
         case 'NLN':
             // A user connected.
-            break;
-        case 'FRL':
-            // Initial friends list.
+            if(App.characters[obj.identity] === null || typeof App.characters[obj.identity] === 'undefined'){
+                App.characters[obj.identity] = {};
+            }            
+            App.characters[obj.identity].gender = obj.gender;
+            App.characters[obj.identity].status = obj.status;
             break;
         case 'ORS':
             // A list of open private rooms.
@@ -784,12 +1126,20 @@ function parseServerMessage(message){
             break;
         case 'RTB':
             // Real-time bridge. Indicates the user received a note or message, right at the very moment this is received.
+            pushMessageToConsole('Real-Time Bridge - Received ' + obj.type + ' from ' + obj.character + '.');
             break;
         case 'SFC':
             // Alerts admins and chatops of an issue.
             break;
         case 'STA':
             // A user changed their status.
+            App.characters[obj.character].status = obj.status;
+            App.characters[obj.character].statusmsg = obj.statusmsg;
+            
+            // If us
+            if(obj.character === App.user.loggedInAs){
+                pushMessageToConsole('Your status has been updated successfully.');
+            }
             break;
         case 'SYS':
             // System message from the server.
@@ -800,20 +1150,22 @@ function parseServerMessage(message){
             break;
         case 'UPT':
             // Informs the client of the server's self-tracked online time and a few other bits of information.
-            var msg = '<b>System Information</b>';
-            msg += '<ul>';
-                msg += '<li>Uptime: ' + msToTime(Math.round(new Date().getTime() / 1000) - parseInt(obj.starttime)) + '</li>';
-                msg += '<li>Channels: ' + obj.channels + '</li>';
-                msg += '<li>Users: ' + obj.users + '</li>';
-				msg += '<li>Max simultaneous users since last restart: ' + obj.maxusers + '</li>';
-				msg += '<li>Accepted Connections: ' + obj.accepted + '</li>';
-            msg += '</ul>';
+            var msg = '[b]System Information[/b]';
+            msg += '[ul]';
+                msg += '[li]Uptime: ' + msToTime(Math.round(new Date().getTime() / 1000) - parseInt(obj.starttime)) + '[/li]';
+                msg += '[li]Channels: ' + obj.channels + '[/li]';
+                msg += '[li]Users: ' + obj.users + '[/li]';
+				msg += '[li]Max simultaneous users since last restart: ' + obj.maxusers + '[/li]';
+				msg += '[li]Accepted Connections: ' + obj.accepted + '[/li]';
+            msg += '[/ul]';
             pushMessageToConsole(msg);
             break;
         case 'VAR':
             // Variables the server sends to inform the client about server variables.
             App.serverVars[obj.variable] = obj.value;
-            pushMessageToConsole('Received server variable ' + obj.variable + ' with value ' + obj.value);
+            if(obj.variable === 'permissions' && obj.value !== '0'){
+                pushMessageToConsole('Welcome F-List Staff member! Let me know if there\'s anything Strawberry can do to help you out!');
+            }
             break;
     }
 }
