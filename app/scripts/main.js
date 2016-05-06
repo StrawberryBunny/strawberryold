@@ -98,14 +98,16 @@ function pushMessageToConsole(message){
     App.tools['console'].queue.push('<b>' + timestamp + '</b> ' + message);
     
     // If the console is open, push the message immediately.
-    if(App.state.currentTool === 'console' && App.tools['console'].currentlyDisplaying == false){
+    if(App.state.currentTool === 'console' && App.tools['console'].currentlyDisplaying === false){
         displayQueuedConsoleMessages();
     }
 }
 
 function displayQueuedConsoleMessages(){
     // if we're already displaying, don't bother.
-    if(App.tools['console'].currentlyDisplaying) return;
+    if(App.tools['console'].currentlyDisplaying){
+         return;
+    }
     
     App.tools['console'].currentlyDisplaying = true;            
     if(App.tools['console'].queue.length > 0){
@@ -154,7 +156,7 @@ function displayNextConsoleMessage(iterate){
 function createNextConsoleMessageTimeoutCallback(iterate){
     return function(){
         displayNextConsoleMessage(iterate);
-    }
+    };
 }
 
 /**
@@ -234,7 +236,9 @@ function toggleTool(toolName){
     App.state.currentTool = toolName;
     
     // Let this tool perform anything it needs to do when it's shown.
-    if(toolName !== '') window[App.consts.tools[toolName].show]();
+    if(toolName !== ''){
+        window[App.consts.tools[toolName].show]();
+    }
     
     // Layout
     layout();
@@ -288,9 +292,9 @@ function msToTime(duration) {
         , hours = parseInt((duration/(1000*60*60))%24)
         , days = parseInt((duration/(1000*60*60*24)));
 
-    hours = (hours < 10) ? "0" + hours : hours;
-    minutes = (minutes < 10) ? "0" + minutes : minutes;
-    seconds = (seconds < 10) ? "0" + seconds : seconds;
+    hours = (hours < 10) ? '0' + hours : hours;
+    minutes = (minutes < 10) ? '0' + minutes : minutes;
+    seconds = (seconds < 10) ? '0' + seconds : seconds;
 
     return days + ' days ' + hours + ' hours, ' + minutes + ' minutes, ' + seconds + ' seconds';
 }
@@ -312,8 +316,6 @@ function postForTicket(account, password){
                 });
             }
             else {
-                console.log(data.characters);
-                
                 // Store the data we got back
                 App.user.account = account;
                 App.user.ticket = data.ticket;
@@ -526,7 +528,9 @@ function createDomsTool(domMainMenu, domToolPanel, name){
     domToolPanel.append(contentDom);
     
     // Store this tool's doms.
-    if(typeof App.tools[name] == 'undefined') App.tools[name] = {};
+    if(typeof App.tools[name] === 'undefined'){
+         App.tools[name] = {};
+    }
     App.tools[name].button = buttonDom;
     App.tools[name].content = contentDom;
     

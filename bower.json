@@ -3,7 +3,8 @@
   "private": true,
   "dependencies": {
     "bootstrap": "~3.3.5",
-    "font-awesome": "^4.6.2"
+    "font-awesome": "^4.6.2",
+    "components-font-awesome": "^4.6.1"
   },
   "overrides": {
     "bootstrap": {
