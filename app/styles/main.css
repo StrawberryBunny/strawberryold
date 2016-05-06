@@ -111,11 +111,22 @@ html, body {
 }
 
 #userlistchanneltitle {
-	width: 150px;
-	text-align: left;
 	white-space: nowrap;
 	overflow-x: hidden;
 	text-overflow: ellipsis;	
+}
+
+.userlisttopbar .famuted {
+    font-size: 24px;
+    padding-left: 5px;
+}
+
+.userlistcontents {
+    padding-left: 5px;
+}
+
+.userlistcontents .userentry {
+    display: flex;
 }
 
 /* Open Channel List */
@@ -145,6 +156,7 @@ html, body {
     overflow-y: auto;
     overflow-x: hidden;
     white-space: nowrap;
+    padding: 10px;
 }
 
 .nochannelwrapper {
@@ -153,6 +165,11 @@ html, body {
     position: relative;
     overflow: hidden;
     opacity: 0.3;
+}
+
+.channelmessages {
+    width: 100%;
+    height: 100%;
 }
 
 #nochannelimage {
@@ -252,27 +269,6 @@ html, body {
     margin-left: 20px;
 }
 
-/* Tool Panel - Console */
-.toolconsolescroller {
-    overflow-y: auto;
-    overflow-x: hidden;
-    word-wrap: break-word;
-    height: 100%;
-}
-
-.toolconsolescrollermessages {
-    padding: 5px;
-}
-
-.consolemessage {
-    padding-left: 10px;
-    padding-right: 10px;
-    padding-top: 5px;
-    padding-bottom: 5px;
-    margin-bottom: 5px;
-    background-color: #333333;
-}
-
 /* Tool - Feed */
 .toolfeedscroller {
     overflow-y: auto;
@@ -302,10 +298,6 @@ html, body {
     font-weight: bold;
     font-size: 18px;
     margin-bottom: 5px;
-}
-
-.feedmessagemessage {
-    
 }
 
 .feedmessage .famuted {
@@ -365,9 +357,36 @@ html, body {
     background-color: #ea4933;
 }
 
-
-
 /* Global */
+
+.userentry {
+    align-items: center;
+    cursor: pointer;    
+}
+
+.userentry img {
+    padding-right: 4px;
+}
+
+.message {
+    display: block;
+    background-color: #333333;
+    white-space: pre-wrap;
+    padding: 5px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    align-items: flex-start;
+}
+
+.message .userentry {
+    display: inline-flex;
+    
+}
+
+.messagetext {
+    display: inline;
+    word-wrap: break-word;
+}
 
 .avatar {
     margin: 5px;
@@ -386,6 +405,7 @@ html, body {
 .fabutton {
     cursor: pointer;
     color: #c7c7c7;
+    height: 48px;
 }
 
 .fabutton:hover {
