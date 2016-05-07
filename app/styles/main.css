@@ -404,6 +404,56 @@ html, body {
     padding-top: 10px;
 }
 
+/* Tool - Friends List */
+.friendentry {
+    display: flex;
+    background-color: #4d4d50;
+    cursor: pointer;
+}
+
+.friendentry:nth-of-type(odd){
+    background-color: #303031;
+}
+
+.friendentry:hover {
+    background-color: #ea4933;
+}
+
+.friendentrytext {
+    margin: 10px;
+    display: block;
+}
+
+.friendentryavatar {
+    position: relative;
+    left: 0;
+    top: 0;
+}
+
+.avatarunderimage {
+    position: relative;
+    top: 0;
+    bottom: 0;
+    margin: 15px;
+}
+
+.avataroverstatus {
+    position: absolute;
+    top: 93px;
+    left: 93px;
+}
+
+.avatarsourcethumb {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    width: 50px;
+    height: 50px;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #222222;
+}
+
 /* Global */
 
 .userentry {

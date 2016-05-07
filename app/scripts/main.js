@@ -26,14 +26,24 @@ var App = {
         characters: [],         // Array of String (character names)
         loggedInAs: '',
         ignoreList: [],
-        friendsList: {}         // Format: { "sourcecharacter": [ "friend1", "friend2"], "sourcechatacter2": [ "friend1", "friend2"] }
+        friendsList: {},         // Format: { "sourcecharacter": [ "friend1", "friend2"], "sourcechatacter2": [ "friend1", "friend2"] }
+        bookmarks: []
     },
     state: { // Collection of items related to the dom
         currentTool: '',
-        loggedInCount: -1, // The user count at log in.
-        listedCount: 0,
         openChannels: [],
-        selectedChannel: ''
+        selectedChannel: '',
+        logInReadyInfo: {
+            loadingDelay: true,
+            ready: false,
+            identified: false,
+            initialCharacterCount: -1,
+            listedCharacters: 0,
+            listComplete: false,
+            serverInfoRetrieved: false,
+            friendsListRetrieved: false,
+            bookmarksRetrieved: false            
+        }
     },
     tools: { // A place to store things for each tool: (all tools have a button and content entry for their respective dom elements.)
        status: {
@@ -58,6 +68,7 @@ var App = {
     },
     consts: {
         version: '0.2',
+        logInTimeout: 2500,
         icons: {
             loading: [
                 ['fa-rocket', 'Preparing to blast off.'],
@@ -132,6 +143,36 @@ var App = {
 /**
  * Global
  */
+
+function checkForReadyStatus(){
+    // Has the list of online users finished being received?
+    if(App.state.logInReadyInfo.listComplete && App.state.logInReadyInfo.bookmarksRetrieved && App.state.logInReadyInfo.friendsListRetrieved && App.state.logInReadyInfo.identified){
+        // Switch to the chat.
+        
+        // Set the loading texts
+        $('#loadingtext').text('Log in successful!');
+        $('#loadingtext2').text('Enjoy using Strawberry v' + App.consts.version + '!');
+        
+        // Replace hand
+        $('.loginloadingcontent span').removeClass();
+        var rpslz = [ 'fa-hand-rock-o', 'fa-hand-paper-o', 'fa-hand-scissors-o', 'fa-hand-lizard-o', 'fa-hand-spock-o'];
+        $('.loginloadingcontent span').addClass('fa ' + rpslz[Math.floor(Math.random() * rpslz.length)]);
+        $('.loginloadingcontent span').attr('title', 'SCISSORS cuts PAPER covers ROCK crushes LIZARD poisons SPOCK smashes SCISSORS decapitates LIZARD eats PAPER disproves SPOCK vaporizes ROCK crushes SCISSORS');
+            
+        setTimeout(function(){
+            // Remove login loading content
+            $('.maincontainer').remove();
+
+            // Switch to the chat.
+            $('body').append(createDomMainChat());
+        }, App.consts.logInTimeout);
+    }    
+    else {
+        // Keep waiting.
+        // Server is still receiving LIS messages with the user list. 
+        // Once it's complete, checkForReadyStatus() will be called again.
+    }   
+}
 
 function throwError(message){
     console.log(message);
@@ -584,28 +625,7 @@ function toolShowLogout(){
  * Layout & Navigation  =========================================================================================================
  */
 
-function logInComplete(character){
-    // Set logged in user
-    App.user.loggedInAs = character;
 
-    // Set the loading texts
-    $('#loadingtext').text('Identification successful.');
-    $('#loadingtext2').text('Enjoy using Strawberry!');
-
-    // Replace hand
-    $('.loginloadingcontent span').removeClass();
-    var rpslz = [ 'fa-hand-rock-o', 'fa-hand-paper-o', 'fa-hand-scissors-o', 'fa-hand-lizard-o', 'fa-hand-spock-o'];
-    $('.loginloadingcontent span').addClass('fa ' + rpslz[Math.floor(Math.random() * rpslz.length)]);
-    $('.loginloadingcontent span').attr('title', 'SCISSORS cuts PAPER covers ROCK crushes LIZARD poisons SPOCK smashes SCISSORS decapitates LIZARD eats PAPER disproves SPOCK vaporizes ROCK crushes SCISSORS');
-
-    // Request server information
-    sendMessageToServer('UPT');
-
-    // Push message
-    pushFeedItem('info', 'Logged in as [icon]' + character + '[/icon]');
-
-    // Wait for rest of server data to be brought down.
-}
 
 function toggleTool(toolName){
     if(App.state.currentTool === toolName){
@@ -829,7 +849,6 @@ function createLoginCharListImageClickListener(characterName){
 
         // Open the websocket
         $('#loadingtext').text('Attempting to connect to server.');
-        //openWebSocket(App.user.account, App.user.ticket, characterName);
         openWebSocket(App.user.account, App.user.ticket, characterName);
     };
 }
@@ -847,7 +866,7 @@ function createDomLoginLoading(){
     // select a random loading icon + flavour text to display.
     var index = Math.floor(Math.random() * App.consts.icons.loading.length);
     domLL.append('<span class="loadingicon fa fa-spin ' + App.consts.icons.loading[index][0] + '"></span>');
-    domLL.append('<p id="loadingtext">Attempting to identify with server.<p>');
+    domLL.append('<p id="loadingtext">Attempting to identify with server.</p>');
     domLL.append('<p id="loadingtext2">' + App.consts.icons.loading[index][1] + '</p>');
 
     return domContainer;
@@ -1249,6 +1268,9 @@ function createDomToolFriendsList(){
     // Store
     App.tools['friends'].scroller = domScroller;
     App.tools['friends'].scrollerContent = domScrollerContent;
+    
+    // Create friend entries
+    createDomFriendsListContents();
 }
 
 function createDomFriendsListContents(){
@@ -1274,7 +1296,7 @@ function createDomFriendsListContents(){
 
 function createDomFriendsListEntry(sourceName, friendName){
     var escapedSourceName = escapeHtml(sourceName).toLowerCase();
-    var escapedFriendName = escapeHtml(friendNmae).toLowerCase();
+    var escapedFriendName = escapeHtml(friendName).toLowerCase();
     
     var stat = "Offline";
     var statusmsg = "";
@@ -1293,7 +1315,7 @@ function createDomFriendsListEntry(sourceName, friendName){
     
     var domAvatarUnderImage = $('<img class="avatarunderimage img-rounded" src="https://static.f-list.net/images/avatar/' + escapedFriendName + '.png" title="' + friendName + '"/>')
     domAvatar.append(domAvatarUnderImage);
-    var domAvatarOverStatus = $('<img class="avataroverstatus" src="images/status-small-' + stat + '.png" title="' + stat + '"/>');
+    var domAvatarOverStatus = $('<img class="avataroverstatus" src="images/status-large-' + stat + '.png" title="' + stat + '"/>');
     domAvatar.append(domAvatarOverStatus);
     var domAvatarSourceThumb = $('<img class="avatarsourcethumb img-circle" src="https://static.f-list.net/images/avatar/' + escapedSourceName + '.png" title="' + sourceName + '"/>')
     domAvatar.append(domAvatarSourceThumb);
@@ -1383,6 +1405,9 @@ function openWebSocket(account, ticket, characterName){
         // Attempt to identify with the server
         var command = 'IDN { "method": "ticket", "account": "' + account + '", "ticket": "' + ticket + '", "character": "' + characterName + '", "cname": "strawberry", "cversion": "' + App.consts.version + '" }';
         sendMessageToServer(command);
+
+        // Log in state
+        App.state.logInReadyInfo.identified = true;
 
         // Update message
         $('#loadingtext').text('Attempting to identify with server.');
@@ -1481,7 +1506,7 @@ function parseServerMessage(message){
         case 'CON':
             // The number of connected users. Received after connecting and identifying.
             pushFeedItem('info', 'There are currently ' + obj.count + ' users logged in.');
-            App.state.loggedInCount = obj.count;
+            App.state.logInReadyInfo.initialCharacterCount = obj.count;
             break;
         case 'COR':
             // Removes a channel operator.
@@ -1550,7 +1575,16 @@ function parseServerMessage(message){
             break;
         case 'IDN':
             // Used to inform the client their identification is successful and handily sends their character name along with it.
-            logInComplete(obj.character);
+            
+            // Set logged in user
+            App.user.loggedInAs = obj.character;
+
+            // Set the loading texts
+            $('#loadingtext').text('Identification successful.');
+            $('#loadingtext2').text('Requesting server information...');
+            
+            // Request server information
+            sendMessageToServer('UPT');
             break;
         case 'IGN':
             // Handles the ignore list
@@ -1592,19 +1626,15 @@ function parseServerMessage(message){
                     status: stylizeStatus(obj.characters[i][2]),
                     statusmsg: obj.characters[i][3]
                 };
-                App.state.listedCount++;
+                App.state.logInReadyInfo.listedCharacters++;
             }
 
             pushFeedItem('info', 'Received character payload of ' + obj.characters.length + ' character' + (obj.characters.length > 1 ? 's' : '') + '.');
 
             // If the amount of characters now matches or is greater than con, we've received the full user list.
-            if(App.state.listedCount >= App.state.loggedInCount){
-                // All received.
-                // Remove login loading content
-                $('.maincontainer').remove();
-
-                // Switch to the chat.
-                $('body').append(createDomMainChat());
+            if(App.state.logInReadyInfo.listedCharacters >= App.state.logInReadyInfo.initialCharacterCount){
+                App.state.logInReadyInfo.listComplete = true;
+                checkForReadyStatus();
             }
             break;
         case 'LRP':
@@ -1676,6 +1706,7 @@ function parseServerMessage(message){
             break;
         case 'TPN':
             // A user informs us of their typing status.
+            console.log(message);
             break;
         case 'UPT':
             // Informs the client of the server's self-tracked online time and a few other bits of information.
@@ -1688,6 +1719,16 @@ function parseServerMessage(message){
 				msg += '[li]Accepted Connections: ' + obj.accepted + '[/li]';
             msg += '[/ul]';
             pushFeedItem('info', msg);
+            
+            // Server info retrieved
+            App.state.logInReadyInfo.serverInfoRetrieved = true;
+            
+            // Set the loading texts
+            $('#loadingtext').text('Server information retrieved.');
+            $('#loadingtext2').text('Requesting friends list...');
+            
+            // Continue on with log in process
+            postForFriendsList();
             break;
         case 'VAR':
             // Variables the server sends to inform the client about server variables.
@@ -1695,6 +1736,11 @@ function parseServerMessage(message){
             if(obj.variable === 'permissions' && obj.value !== '0'){
                 pushFeedItem('info', 'Welcome F-List Staff member! Let me know if there\'s anything Strawberry can do to help you out!');
             }
+            break;
+        default:
+            var msg = "Server received an unhandled message: " + message;
+            console.log(msg);
+            pushFeedItem('error', msg);
             break;
     }
 }
@@ -1734,7 +1780,7 @@ function postForFriendsList(){
 		function(data){			
 			var friends = data.friends;
 			App.user.friendsList = {};
-			for(i = 0; i < friends.length; i++){
+			for(var i = 0; i < friends.length; i++){
 				var source = friends[i].source;
 				var dest = friends[i].dest;
 				if(typeof App.user.friendsList[source] == 'undefined'){
@@ -1742,8 +1788,30 @@ function postForFriendsList(){
 				}
 				App.user.friendsList[source].push(dest);
 			}
+                        
+            App.state.logInReadyInfo.friendsListRetrieved = true;
             
-            createDomFriendsListContents();
+            $('#loadingtext').text('Friends list received.');
+            $('#loadingtext2').text('Requesting bookmarks list...');
+            
+            // Continuie on with log in process.
+            postForBookmarks();        
+		}
+	);
+}
+
+function postForBookmarks(){
+	$.post('https://www.f-list.net/json/api/bookmark-list.php', 
+		'ticket=' + App.user.ticket + '&account=' + App.user.account,
+		function(data){
+            App.user.bookmarks = data.characters;
+            App.state.logInReadyInfo.bookmarksRetrieved = true;
+            
+            $('#loadingtext').text('Bookmarks received.');
+            $('#loadingtext2').text('Waiting for full user list to download... ' + App.state.logInReadyInfo.listedCharacters + " / " + App.state.logInReadyInfo.initialCharacterCount);
+            
+            // Log in process complete (except for full user list)
+            checkForReadyStatus();                       
 		}
 	);
 }
