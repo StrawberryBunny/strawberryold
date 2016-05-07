@@ -164,7 +164,7 @@ function sendChatMessage(message, channel){
     }
 
     // Send message to server
-    sendMessageToServer('MSG { "channel": "' + channel + '", "message": "' + message + '" }')
+    sendMessageToServer('MSG { "channel": "' + channel + '", "message": "' + escapeJson(message) + '" }')
 
     // Add the message to the chat window
     receiveMessage(channel, App.user.loggedInAs, message);
@@ -650,6 +650,18 @@ function escapeHtml(string) {
 	return String(string).replace(/[&<>"'\/]/g, function (s) {
 		return entityMap[s];
     });
+}
+
+function escapeJson(string){
+	return string
+	.replace(/[\\]/g, '\\\\')
+    .replace(/[\"]/g, '\\\"')
+    .replace(/[\/]/g, '\\/')
+    .replace(/[\b]/g, '\\b')
+    .replace(/[\f]/g, '\\f')
+    .replace(/[\n]/g, '\\n')
+    .replace(/[\r]/g, '\\r')
+    .replace(/[\t]/g, '\\t');
 }
 
 function getHumanReadableTimestampForNow(){
