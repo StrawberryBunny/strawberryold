@@ -99,7 +99,7 @@ var App = {
                 ['fa-venus-double', 'No dicks!'],
                 ['fa-circle-o-notch', 'Please wait.'],
                 ['fa-pie-chart', 'Making a pie chart to display how much I love pie, charts and pie charts.'],
-                ['fa-floppy', 'Please wait. Lost the little key to the disk box.'],
+                ['fa-floppy-o', 'Please wait. Lost the little key to the disk box.'],
                 ['fa-link', 'Informing Link that his princess is in another castle and that he\'s in the wrong game.'],
                 ['fa-paperclip', 'One moment. Just giving Clippy his annual beating so he remembers his place.']
             ]
@@ -178,7 +178,6 @@ function checkForReadyStatus(){
 }
 
 function throwError(message){
-    console.log('Error: ' + message);
     pushFeedItem('error', message);
 }
 
@@ -1579,7 +1578,7 @@ function parseServerMessage(message){
         var obj = JSON.parse(message.substr(3));
     }
 
-    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'ORS', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'LIS', 'NLN', 'JCH', 'LCH'];
+    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'ORS', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'NLN', 'JCH', 'LCH', 'ERR'];
     if(dontLog.indexOf(tag) === -1){
         console.log(message);
     }
@@ -1670,6 +1669,9 @@ function parseServerMessage(message){
                 case 4:
                     // Indentification failed.
                     servErrorIdentification();
+                    break;
+                case 28:
+                    throwError('You are already in the requested channel.');
                     break;
             }
             break;
@@ -1968,4 +1970,9 @@ function postForBookmarks(){
 $(document).ready(function(){
     // Create the login dom
     $('body').append(createDomLogin());
+    
+    // Future session links.
+    $(document).on('click', '.sessionlink', function(e){
+        joinChannel($(this).attr('id'));
+    });
 });

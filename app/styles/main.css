@@ -592,3 +592,13 @@ a:active {
     text-decoration:  none;
 }
 
+
+.sessionlink {
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.sessionlink:hover {
+    color: #ea4933;
+    text-decoration: none;
+}
