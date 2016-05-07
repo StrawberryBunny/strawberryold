@@ -1317,7 +1317,15 @@ function parseServerMessage(message){
             break;
         case 'CDS':
             // A channel's description has changed. (Also sent in response to JCH)
-            receiveMessage(obj.channel, 'Description', obj.description);
+            var isPublic = obj.channel.substr(0, 3) !== 'ADH';
+            var channels = isPublic ? App.publicChannels : App.privateChannels;
+            var showNewDescription = typeof channels[obj.channel].description === 'undefined' || channels[obj.channel].description != obj.description;
+            console.log("Showing description: " + showNewDescription);
+            if(showNewDescription){            
+                receiveMessage(obj.channel, 'Description', obj.description);
+            }
+            // Store description
+            channels[obj.channel].description = obj.description;
             break;
         case 'CHA':
             // Receiving a list of all public channels.
