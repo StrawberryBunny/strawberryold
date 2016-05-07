@@ -25,7 +25,8 @@ var App = {
         ticket: '',             // String (the api ticket aquired at log in)
         characters: [],         // Array of String (character names)
         loggedInAs: '',
-        ignoreList: []
+        ignoreList: [],
+        friendsList: {}         // Format: { "sourcecharacter": [ "friend1", "friend2"], "sourcechatacter2": [ "friend1", "friend2"] }
     },
     state: { // Collection of items related to the dom
         currentTool: '',
@@ -875,6 +876,8 @@ function createDomMainChat(){
     createDomToolStatus();
     createDomToolChannelList();
     createDomToolFeed();
+    createDomToolViewer();
+    createDomToolFriendsList();
 
     return domChatContainer;
 }
@@ -1191,6 +1194,117 @@ function createDomToolFeedMessage(type, message){
     return domMsg;
 }
 
+function createDomToolViewer(){
+    var domTitleBar = $('<div class="tooltopbar"></div>');
+    App.tools['viewer'].content.append(domTitleBar);
+    
+    // buttons
+    var btnOpenProfile = $('<span class="faicon fa fa-external-link" title="Open Profile"></span>');
+    domTitleBar.append(btnOpenProfile);
+    
+    var btnSendNote = $('<span class="faicon fa fa-envelope" title="Send Note"></span>');
+    domTitleBar.append(btnSendNote);
+    
+    var btnMemo = $('<span class="faicon fa fa-sticky-note" title="View/Edit Memo"></span>')
+    domTitleBar.append(btnMemo);
+    
+    var btnFriend = $('<span class="faicon fa fa-user-plus" title="Send Friend Request"></span>');
+    domTitleBar.append(btnFriend);
+    
+    var btnBookmark = $('<span class="faicon fa fa-bookmark-o" title="Bookmark"></span>');
+    domTitleBar.append(btnBookmark);   
+    
+    var btnOpenPM = $('<span class="faicon fa fa-comments" title="Open PM"></span>');
+    domTitleBar.append(btnOpenPM);
+    
+    // Scroller
+    var domScroller = $('<div class="toolviewerscroller"></div>');
+    App.tools['viewer'].content.append(domScroller);
+    App.tools['viewer'].scroller = domScroller;
+    
+    // Push
+    var domContent = $('<div class="toolviewerarea"></div>');
+    domScroller.append(domContent);
+    App.tools['viewer'].scrollerContent = domContent; 
+}
+
+function createDomToolFriendsList(){
+    
+    // Title bar
+    var domTitleBar = $('<div class="tooltopbar"></div>');
+    App.tools['friends'].content.append(domTitleBar);
+    
+    // buttons
+    var btnAll = $('<span class="faicon fa fa-check-circle-o" title="All Characters"></span>');
+    domTitleBar.append(btnAll);
+    
+    // Scroller
+    var domScroller = $('<div class="toolfriendsscroller"></div>');
+    App.tools['friends'].content.append(domScroller);
+    
+    // Scroller content
+    var domScrollerContent = $('<div class="toolfriendsscrollercontent"></div>');
+    domScroller.append(domScrollerContent);
+    
+    // Store
+    App.tools['friends'].scroller = domScroller;
+    App.tools['friends'].scrollerContent = domScrollerContent;
+}
+
+function createDomFriendsListContents(){
+    // Sort our characters in alphabetical order
+    var order = [];
+    for(var key in App.user.friendsList){
+        order.push(key);
+        // Sort this list of friends.
+        App.user.friendsList[key].sort();
+    }
+    order.sort();
+    
+    // Add the logged in character's friends first.
+    for(var i = 0; i < App.user.friendsList[App.user.loggedInAs].length; i++){
+        var dom = createDomFriendsListEntry(App.user.loggedInAs, App.user.friendsList[App.user.loggedInAs][i]);
+        App.tools['friends'].scrollerContent.append(dom);
+        dom.click(function(){
+            // TODO Open viewer for this character
+            console.log("Viewer: " + $(this).attr('title'));
+        });
+    }
+}
+
+function createDomFriendsListEntry(sourceName, friendName){
+    var escapedSourceName = escapeHtml(sourceName).toLowerCase();
+    var escapedFriendName = escapeHtml(friendNmae).toLowerCase();
+    
+    var stat = "Offline";
+    var statusmsg = "";
+    
+    if(typeof App.characters[friendName] != 'undefined'){
+        stat = App.characters[friendName].status;
+        statusmsg = App.characters[friendName].statusmsg;
+    }
+    
+    // Dom
+    var domContainer = $('<div class="friendentry" title="' + friendName + '"></div>');
+    
+    // Avatar
+    var domAvatar = $('<div class="friendentryavatar"></div>');
+    domContainer.append(domAvatar);
+    
+    var domAvatarUnderImage = $('<img class="avatarunderimage img-rounded" src="https://static.f-list.net/images/avatar/' + escapedFriendName + '.png" title="' + friendName + '"/>')
+    domAvatar.append(domAvatarUnderImage);
+    var domAvatarOverStatus = $('<img class="avataroverstatus" src="images/status-small-' + stat + '.png" title="' + stat + '"/>');
+    domAvatar.append(domAvatarOverStatus);
+    var domAvatarSourceThumb = $('<img class="avatarsourcethumb img-circle" src="https://static.f-list.net/images/avatar/' + escapedSourceName + '.png" title="' + sourceName + '"/>')
+    domAvatar.append(domAvatarSourceThumb);
+    
+    // Text    
+    var domFriendEntryText = $('<div class="friendentrytext"><p><b>' + friendName + '</b></p><p><table style="table-layout: fixed; width: 100%; word-wrap: break-word;"><td>' + statusmsg + '</td></table></p></div>');    
+    domContainer.append(domFriendEntryText);
+    
+    return domContainer;   
+}
+
 /* Channels */
 function createDomChannelContents(){
     return $('<div class="channelmessages"></div>');
@@ -1344,11 +1458,6 @@ function parseServerMessage(message){
 
             // Now request a list of all private channels.
             sendMessageToServer('ORS');
-
-            /*
-            // Inform dom
-            channelListUpdated();
-            */
             break;
         case 'CIU':
             // Receiving an invite to a channel.
@@ -1404,9 +1513,11 @@ function parseServerMessage(message){
         case 'FLN':
             // Send by the server to inform the client that a given character went offline.
             App.characters[obj.character].status = 'offline';
+            // TODO Remove user from any rooms he/she was in (including userlist entries)
+            // TODO update any exsiting userentries on messages to reflect new status.
             break;
         case 'FRL':
-            // Initial friends list.
+            // Initial friends list. (not used)
             break;
         case 'HLO':
             // Server hello command. Tells which server version is running and who wrote it.
@@ -1613,6 +1724,29 @@ function servErrorIdentification(){
     $('.loginloadingcontent span').addClass('fa-hand-stop-o');
 }
 
+/** 
+ * Post Helpers ======================================================================================================================
+ */
+
+function postForFriendsList(){
+    $.post('https://www.f-list.net/json/api/friend-list.php', 
+		'ticket=' + App.user.ticket + '&account=' + App.user.account,
+		function(data){			
+			var friends = data.friends;
+			App.user.friendsList = {};
+			for(i = 0; i < friends.length; i++){
+				var source = friends[i].source;
+				var dest = friends[i].dest;
+				if(typeof App.user.friendsList[source] == 'undefined'){
+					App.user.friendsList[source] = [];
+				}
+				App.user.friendsList[source].push(dest);
+			}
+            
+            createDomFriendsListContents();
+		}
+	);
+}
 
 /**
  * Main Entry Point ===================================================================================================================
