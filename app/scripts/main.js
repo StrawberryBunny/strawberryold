@@ -178,7 +178,7 @@ function checkForReadyStatus(){
 }
 
 function throwError(message){
-    console.log(message);
+    console.log('Error: ' + message);
     pushFeedItem('error', message);
 }
 
@@ -448,7 +448,7 @@ function leaveChannel(name){
 function closeChannel(name){
     // If this channel isn't in the list of open channels.
     if(App.state.openChannels.indexOf(name) === -1){
-        console.log("Trying to close a channel that isn't open.");
+        console.log("Error: Trying to close a channel that isn't open.");
         pushFeedItem('error', 'Tried to close channel ' + name + ' when it isn\'t open.');
         return;
     }
@@ -1404,7 +1404,7 @@ function createDomFriendsListContents(){
         App.tools['friends'].scrollerContent.append(dom);
         dom.click(function(){
             // TODO Open viewer for this character
-            console.log("Viewer: " + $(this).attr('title'));
+            console.log("Open Viewer: " + $(this).attr('title'));
         });
     }
 }
@@ -1601,7 +1601,6 @@ function parseServerMessage(message){
             var isPublic = obj.channel.substr(0, 3) !== 'ADH';
             var channels = isPublic ? App.publicChannels : App.privateChannels;
             var showNewDescription = typeof channels[obj.channel].description === 'undefined' || channels[obj.channel].description != obj.description;
-            console.log("Showing description: " + showNewDescription);
             if(showNewDescription){            
                 receiveMessage(obj.channel, 'Description', obj.description);
             }
@@ -1690,8 +1689,7 @@ function parseServerMessage(message){
             break;
         case 'ICH':
             // Initial channel data. Received in response to JCH along with CDS. (userlist, channelname, mode)
-            console.log(message);
-
+            
             // Is this channel public or private?
             var isPublic = obj.channel.substr(0, 3) !== 'ADH';
             var channels = isPublic ? App.publicChannels : App.privateChannels;
