@@ -1040,6 +1040,13 @@ function createFeedMessageCounter(){
     // Hide both for now.
     domCounter.hide();
     domText.hide();
+    
+    // Should we show them already?
+    if(App.tools['feed'].queue.length > 0){
+        App.tools['feed'].counter.text.text(App.tools['feed'].queue.length);
+        App.tools['feed'].counter.image.fadeIn();
+        App.tools['feed'].counter.text.fadeIn();
+    }
 }
 
 /* Individual Tools */
