@@ -348,16 +348,43 @@ function channelListUpdated(){ // Called from parseServerMessage() when the chan
     App.tools['channels'].entryPush.empty();
     App.tools['channels'].channelEntries = [];
     
-    // Sort the entries
-    var list = [];
-    for(var key in App.publicChannels){
-        list.push(key);
-    }
-    list.sort();   
+    // Add a title seperator for "Public Channels"
+    var sepDom = $('<div class="channellistseperator">Public Channels</div>');
+    App.tools['channels'].entryPush.append(sepDom);
     
+    var publicList = [];
+    // Sort the entries
+    for(var key in App.publicChannels){
+        publicList.push(key);
+    }
+    publicList.sort();   
+       
     // Create entries for each channel
-    for(var i = 0; i < list.length; i++){
-        var dom = createDomChannelListEntry(App.publicChannels[list[i]].name, App.publicChannels[list[i]].characterCount);
+    for(var i = 0; i < publicList.length; i++){
+        var dom = createDomChannelListEntry(App.publicChannels[publicList[i]].name, App.publicChannels[publicList[i]].name, App.publicChannels[publicList[i]].characterCount);
+        App.tools['channels'].entryPush.append(dom);
+    }
+    
+    // Add a title seperator for "Private Channels"
+    var sepDom = $('<div class="channellistseperator">Private Channels</div>');
+    App.tools['channels'].entryPush.append(sepDom);    
+    
+    var privateList = [];
+    for(var key in App.privateChannels){
+        privateList.push([App.privateChannels[key].title, key]);
+    }
+    privateList.sort(function(a, b){
+        var titleA = a[0].toLowerCase();
+        var titleB = b[0].toLowerCase();
+        
+        if(titleA < titleB) return -1;
+        if(titleA > titleB) return 1;
+        return 0;
+    });
+    
+    // Create entires
+    for(var i = 0; i < privateList.length; i++){
+        var dom = createDomChannelListEntry(privateList[i][1], privateList[i][0], App.privateChannels[privateList[i][1]].characterCount);
         App.tools['channels'].entryPush.append(dom);
     }
 }
@@ -968,10 +995,10 @@ function createDomToolChannelList(){
     App.tools['channels'].entryPush = domEntryPush;
 }
 
-function createDomChannelListEntry(channelName, characterCount){
+function createDomChannelListEntry(channelName, channelTitle, characterCount){
     var domContainer = $('<div class="channellistentry"></div>');
     
-    var domRoomName = $('<div>' + channelName + '</div>');
+    var domRoomName = $('<div>' + channelTitle + '</div>');
     domContainer.append(domRoomName);
     
     var domCharCount = $('<div>' + characterCount + '</div>');
@@ -1187,8 +1214,13 @@ function parseServerMessage(message){
                 App.publicChannels[obj.channels[i].name].characterCount = obj.channels[i].characters;
             }            
             
+            // Now request a list of all private channels.
+            sendMessageToServer('ORS');
+            
+            /*
             // Inform dom
             channelListUpdated();
+            */
             break;
         case 'CIU':
             // Receiving an invite to a channel.
@@ -1205,7 +1237,9 @@ function parseServerMessage(message){
             break;
         case 'COL':
             // Gives a list of chat ops. Sent in response to JCH
-            App.publicChannels[obj.channel].ops = obj.oplist;            
+            var isPublic = obj.channel.substr(0, 3) !== 'ADH';
+            var channels = isPublic ? App.publicChannels : App.privateChannels;
+            channels[obj.channel].ops = obj.oplist;            
             break;
         case 'CON':
             // The number of connected users. Received after connecting and identifying.
@@ -1354,6 +1388,22 @@ function parseServerMessage(message){
             break;
         case 'ORS':
             // A list of open private rooms.
+            
+             // Update our list of channels.
+            for(var i = 0; i < obj.channels.length; i++){
+                if(typeof App.privateChannels[obj.channels[i].name] === 'undefined'){
+                    App.privateChannels[obj.channels[i].name] = {};
+                }
+                
+                App.privateChannels[obj.channels[i].name].name = obj.channels[i].name;
+                App.privateChannels[obj.channels[i].name].title = obj.channels[i].title;
+                App.privateChannels[obj.channels[i].name].mode = obj.channels[i].mode;
+                App.privateChannels[obj.channels[i].name].characterCount = obj.channels[i].characters;
+            } 
+            
+            // Update dom.
+            channelListUpdated();
+            
             break;            
         case 'PIN':
             // Respond to pings

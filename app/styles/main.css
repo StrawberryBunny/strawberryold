@@ -393,6 +393,17 @@ html, body {
     background-color: #ea4933;
 }
 
+.channellistseperator {
+    padding: 10px;
+    background-color: #111111;
+    font-weight: bold;
+    text-align: center;
+}
+
+.channellistseperator:not(:first-child) {
+    padding-top: 10px;
+}
+
 /* Global */
 
 .userentry {
