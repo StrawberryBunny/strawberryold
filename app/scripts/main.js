@@ -527,6 +527,11 @@ function displayQueuedFeedMessages(){
 }
 
 function displayNextFeedMessage(iterate){
+    // Check that we actually have a new message
+    if(App.tools['feed'].queue.length == 0){
+        return;
+    } 
+    
     // Get scroller
     var domScroller = App.tools['feed'].scroller;
     var domMessageContainer = App.tools['feed'].messagePush;
@@ -545,9 +550,9 @@ function displayNextFeedMessage(iterate){
     domMsg.hide();
     domMsg.fadeIn(1000, function(){
         // Decrement the feed counter
-        var curCount = App.tools['feed'].counter.text.text();
-        App.tools['feed'].counter.text.text(curCount - 1);
-        if(curCount - 1 <= 0){
+        var curCount = parseInt(App.tools['feed'].counter.text.text());
+        App.tools['feed'].counter.text.text(App.tools['feed'].queue.length + 1);
+        if(App.tools['feed'].queue.length <= 0){
             // fade out
             App.tools['feed'].counter.image.fadeOut();
             App.tools['feed'].counter.text.fadeOut();
@@ -1161,6 +1166,19 @@ function createDomToolFeed(){
 
     var btnFilterAlerts = $('<span class="faicon fa fa-exclamation-triangle" title="Turn off Alerts"></span>');
     domTitleBar.append(btnFilterAlerts);
+    
+    var btnTrashAll = $('<span class="faicon fa fa-trash" title="Trash All"></span>');
+    domTitleBar.append(btnTrashAll);
+    btnTrashAll.click(function(){
+        App.tools['feed'].currentlyDisplaying = false;
+        App.tools['feed'].counter.text.text("");
+        App.tools['feed'].counter.text.fadeOut();
+        App.tools['feed'].counter.image.fadeOut();
+        App.tools['feed'].queue = [];
+        App.tools['feed'].messagePush.children().slideUp(function(){
+            $(this).remove();
+        });
+    });
 
     // scroller
     var domScroller = $('<div class="toolfeedscroller"></div>');
