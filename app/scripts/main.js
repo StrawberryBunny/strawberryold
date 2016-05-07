@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * App Data
+ * App Data ====================================================================================================================
  */
 
 var App = {
@@ -139,12 +139,12 @@ var App = {
 		timestamps: true
 	},
     changelog: [
-        ['0.2', ['Project restarted. Now using gulp to process ESLint, builds etc.']]
+        ['0.2', ['First changelog! Woo!', 'Nothing\'s really changed yet, though.', 'Moved from a simple notepad++ set-up to using Gulp to build my files and Bower for dependency management.']]
     ]
 };
 
 /**
- * Global
+ * Global Functions ============================================================================================================
  */
 
 function checkForReadyStatus(){
@@ -237,6 +237,46 @@ function updateStatus(character, status, statusmsg){
             nameplate.attr('title', statusmsg);
         }
     });
+}
+
+function characterWentOffline(character){
+    // Remove this user's entry in any channel user lists and remove their userentry from the doms.
+    for(var key in App.publicChannels){
+        if(typeof App.publicChannels[key].users !== 'undefined'){
+            var removed = App.publicChannels[key].users.splice(character, 1); 
+            if(typeof removed !== 'undefined'){
+                App.publicChannels[key].userlistDom.children('.userentry').each(function(){
+                    if($(this).attr('title') === character){
+                        $(this).remove();
+                    }
+                });
+            }
+        }
+    }
+    
+    for(var key in App.privateChannels){
+        if(typeof App.privateChannels[key].users !== 'undefined'){
+            var removed = App.privateChannels[key].users.splice(character, 1); 
+            if(typeof removed !== 'undefined'){
+                App.privateChannels[key].userlistDom.children('.userentry').each(function(){
+                    if($(this).attr('title') === character){
+                        $(this).remove();
+                    }
+                });
+            }
+        }
+    }
+    
+    // Update any remianing userentries for this character.
+    updateStatus(character, 'offline', '');    
+    
+    // Was this character our friend or bookmark?
+    if(App.user.friendsList[App.user.loggedInAs].indexOf(character) !== -1){
+        pushFeedItem('friendinfo', 'Your friend ' + character + ' has gone offline.');
+    }
+    else if(App.user.bookmarks.indexOf(character) !== -1){
+        pushFeedItem('bookmarkinfo', 'Your bookmark ' + character + ' has gone offline.');
+    }
 }
 
 /**
@@ -722,18 +762,19 @@ function padNumberToTwoDigits(number){
 }
 
 function msToTime(duration) {
-    var milliseconds = parseInt((duration%1000)/100)
-        , seconds = parseInt((duration/1000)%60)
-        , minutes = parseInt((duration/(1000*60))%60)
-        , hours = parseInt((duration/(1000*60*60))%24)
-        , days = parseInt((duration/(1000*60*60*24)));
+    var milliseconds = parseInt((duration%1000)/100);
+    var seconds = parseInt((duration/1000)%60);
+    var minutes = parseInt((duration/(1000*60))%60);
+    var hours = parseInt((duration/(1000*60*60))%24);
+    var days = parseInt((duration/(1000*60*60*24)));
 
-    hours = (hours < 10) ? '0' + hours : hours;
-    minutes = (minutes < 10) ? '0' + minutes : minutes;
-    seconds = (seconds < 10) ? '0' + seconds : seconds;
-
-    return days + ' days ' + hours + ' hours, ' + minutes + ' minutes, ' + seconds + ' seconds';
+    return days + ' day' + numberEnding(days) + ', ' + hours + ' hour' + numberEnding(hours) + ', ' + minutes + ' minute' + numberEnding(minutes) + ' & ' + seconds + ' second' + numberEnding(seconds) + '.';
 }
+
+function numberEnding (number) {
+    return (number > 1) ? 's' : '';
+}
+
 
 function stripWhitespace(str){
 	return str.replace(/ /g,'').replace(/[^\w\s]/gi, '');
@@ -1158,21 +1199,27 @@ function createDomChannelListEntry(channelName, channelTitle, characterCount){
 }
 
 function createDomToolFeed(){
-    var domTitleBar = $('<div class="tooltopbar"></div>');
+    var domTitleBar = $('<div class="tooltopbar feedtopbar"></div>');
     App.tools['feed'].content.append(domTitleBar);
 
     // buttons
+    var domMainButtons = $('<div class="feedmainbuttons"></div>');
+    domTitleBar.append(domMainButtons);
+    
+    var domOtherButtons = $('<div class="feedotherbuttons"></div>');
+    domTitleBar.append(domOtherButtons);
+    
     var btnFilterPM = $('<span class="faicon fa fa-comments" title="Turn off PMs"></span>');
-    domTitleBar.append(btnFilterPM);
+    domMainButtons.append(btnFilterPM);
 
     var btnFilterMentions = $('<span class="faicon fa fa-commenting" title="Turn off Mentions"></span>');
-    domTitleBar.append(btnFilterMentions);
+    domMainButtons.append(btnFilterMentions);
 
     var btnFilterAlerts = $('<span class="faicon fa fa-exclamation-triangle" title="Turn off Alerts"></span>');
-    domTitleBar.append(btnFilterAlerts);
+    domMainButtons.append(btnFilterAlerts);
     
     var btnTrashAll = $('<span class="faicon fa fa-trash" title="Trash All"></span>');
-    domTitleBar.append(btnTrashAll);
+    domOtherButtons.append(btnTrashAll);
     btnTrashAll.click(function(){
         App.tools['feed'].currentlyDisplaying = false;
         App.tools['feed'].counter.text.text("");
@@ -1207,6 +1254,8 @@ function createDomToolFeedMessage(type, message){
     var typeText = type;
     switch(type){
         case 'info':
+        case 'friendinfo':
+        case 'bookmarkinfo':
             typeText = getHumanReadableTimestampForNow();
             break;
         case 'error':
@@ -1363,14 +1412,11 @@ function createDomToolInfo(){
     var domScrollerContents = $('<div class="toolinfoscrollercontents"></div>');
     domScroller.append(domScrollerContents);
     
-    console.log("Changelog 0: " + App.changelog[0]);
-    
     for(var i = App.changelog.length - 1; i >= 0; i--){
         var dom = $('<div class="changelogentry"></div>');
         
         var html = '<p><b>' + App.changelog[i][0] + '</b></p><ul>';
         
-        var bb;
         for(var j = 0; j < App.changelog[i][1].length; j++){
             html += '<li>' + XBBCODE.process({ text: App.changelog[i][1][j] }).html + '</li>';
         }
@@ -1403,7 +1449,7 @@ function createDomAlert(message){
 }
 
 function createDomUserEntry(name, gender, status, statusmsg){
-    var domContainer = $('<div class="userentry"></div>');
+    var domContainer = $('<div class="userentry" title="' + name + '"></div>');
 
     var genderColour = '#444444';
     if(name != 'Description'){
@@ -1470,8 +1516,9 @@ function openWebSocket(account, ticket, characterName){
     };
 
     App.connection.onerror = function(error){
-        // TODO Display this error.
+        // TODO (Do we need to take action?)
         console.log('WebSocket error: ' + error);
+        pushFeedItem('error', 'WebSocket error: ' + error);
     };
 
     App.connection.onmessage = function(e){
@@ -1479,8 +1526,10 @@ function openWebSocket(account, ticket, characterName){
     };
 
     App.connection.onclose = function(e){
-        // TODO Alert the user.
-        console.log('WebSocket closed with code: ' + e.code + ', reason: ' + e.reason + ', wasClean: ' + e.wasClean);
+        var msg = 'WebSocket closed with code: ' + e.code + ', reason: ' + e.reason + ', wasClean: ' + e.wasClean;
+        console.log(msg);
+        pushFeedItem('error', msg);
+        // TODO (Do we need to take action?)
     };
 }
 
@@ -1493,7 +1542,7 @@ function parseServerMessage(message){
         var obj = JSON.parse(message.substr(3));
     }
 
-    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'LIS', 'NLN', 'JCH'];
+    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'ORS', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'LIS', 'NLN', 'JCH'];
     if(dontLog.indexOf(tag) === -1){
         console.log(message);
     }
@@ -1593,9 +1642,7 @@ function parseServerMessage(message){
             break;
         case 'FLN':
             // Send by the server to inform the client that a given character went offline.
-            App.characters[obj.character].status = 'offline';
-            // TODO Remove user from any rooms he/she was in (including userlist entries)
-            // TODO update any exsiting userentries on messages to reflect new status.
+            characterWentOffline(obj.character);
             break;
         case 'FRL':
             // Initial friends list. (not used)
@@ -1768,7 +1815,7 @@ function parseServerMessage(message){
             // Informs the client of the server's self-tracked online time and a few other bits of information.
             var msg = '[b]System Information[/b]';
             msg += '[ul]';
-                msg += '[li]Uptime: ' + msToTime(Math.round(new Date().getTime() / 1000) - parseInt(obj.starttime)) + '[/li]';
+                msg += '[li]Uptime: ' + msToTime(new Date().getTime() - (parseInt(obj.starttime) * 1000)) + '[/li]';
                 msg += '[li]Channels: ' + obj.channels + '[/li]';
                 msg += '[li]Users: ' + obj.users + '[/li]';
 				msg += '[li]Max simultaneous users since last restart: ' + obj.maxusers + '[/li]';

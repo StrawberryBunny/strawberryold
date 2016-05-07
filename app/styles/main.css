@@ -298,6 +298,16 @@ html, body {
 }
 
 /* Tool - Feed */
+.feedtopbar {
+    display: flex;
+    justify-content: space-between;
+    padding-left: 10px;
+}
+
+.feedotherbuttons .fa {
+    margin-left: 0px;
+}
+
 .toolfeedscroller {
     overflow-y: auto;
     overflow-x: hidden;
