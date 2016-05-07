@@ -483,3 +483,33 @@ html, body {
 .famuted:hover {
     color: #ea4933;
 }
+
+.fa-link {
+    margin-right: 4px;
+}
+
+a {
+    color: #c7c7c7;
+    text-decoration: underline;
+}
+
+a:visited {
+    color: #c7c7c7;
+    text-decoration: underline;
+}
+
+a:focus {
+    color: #c7c7c7;
+    text-decoration: underline;
+}
+
+a:hover {
+    color: #ea4933;
+    text-decoration:  none;
+}
+
+a:active {
+    color: #ea4933;
+    text-decoration:  none;
+}
+

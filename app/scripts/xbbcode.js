@@ -504,7 +504,7 @@ var XBBCODE = (function() {
 				}
 				else {
 					//return '<span class="fa fa-chain" style="margin-right: 3px"></span><a href="' + url + '" target="_blank"> ' + content + '</a>' ; // EDIT arget="_blank"
-					return '<a href="' + url + '" target="_blank">' + content + '</a>';
+					return '<span class="fa fa-link" title="' + url + '"></span><a href="' + url + '" target="_blank" title="' + url + '">' + content + '</a>';
 				}               
             },
             closeTag: function(params,content) {
