@@ -505,8 +505,8 @@ function receiveMessage(channel, character, message){
 
 /* Status */
 function updateStatusForm(){
-    App.tools.status.dropdown.val(App.characters[App.user.loggedInAs].status);
-    App.tools.status.textarea.val(App.characters[App.user.loggedInAs].statusmsg);
+    App.tools['status'].dropdown.value = App.characters[App.user.loggedInAs].status;
+    App.tools['status'].textarea.value = App.characters[App.user.loggedInAs].statusmsg;
 }
 
 /* Channel List */
@@ -1141,7 +1141,7 @@ function createDomToolStatus(){
     // Top content (avatar / dropdown + messagebox)
     var domContent = $('<div id="toolstatuscontenttop"></div>');
 
-    var domAvatar = $('<img id="statusavatar" class="img-rounded" src="https://static.f-list.net/images/avatar/strawberry.png" title="Strawberry"/>');
+    var domAvatar = $('<img id="statusavatar" class="img-rounded" src="https://static.f-list.net/images/avatar/' + escapeHtml(App.user.loggedInAs).toLowerCase() + '.png" title="' + App.user.loggedInAs + '"/>');
     domContent.append(domAvatar);
 
     var domFormContainer = $('<div id="statusform"></div>');
@@ -1398,14 +1398,17 @@ function createDomFriendsListContents(){
     order.sort();
     
     // Add the logged in character's friends first.
-    for(var i = 0; i < App.user.friendsList[App.user.loggedInAs].length; i++){
-        var dom = createDomFriendsListEntry(App.user.loggedInAs, App.user.friendsList[App.user.loggedInAs][i]);
-        App.tools['friends'].scrollerContent.append(dom);
-        dom.click(function(){
-            // TODO Open viewer for this character
-            console.log("Open Viewer: " + $(this).attr('title'));
-        });
+    if(typeof App.user.friendsList[App.user.loggedInAs] !== 'undefined'){
+        for(var i = 0; i < App.user.friendsList[App.user.loggedInAs].length; i++){
+            var dom = createDomFriendsListEntry(App.user.loggedInAs, App.user.friendsList[App.user.loggedInAs][i]);
+            App.tools['friends'].scrollerContent.append(dom);
+            dom.click(function(){
+                // TODO Open viewer for this character
+                console.log("Open Viewer: " + $(this).attr('title'));
+            });
+        }
     }
+    else {}
 }
 
 function createDomFriendsListEntry(sourceName, friendName){
@@ -1578,7 +1581,7 @@ function parseServerMessage(message){
         var obj = JSON.parse(message.substr(3));
     }
 
-    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'ORS', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'NLN', 'JCH', 'LCH', 'ERR'];
+    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'ORS', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'NLN', 'JCH', 'LCH', 'ERR', 'FLN'];
     if(dontLog.indexOf(tag) === -1){
         console.log(message);
     }
