@@ -225,17 +225,17 @@ function openChannel(name){
     
     // Do we need to create doms for this channel?
     if(typeof channels[name].messageDom === 'undefined'){
-        var domMessages = $('<div class="channelmessages"></div>');
+        var domMessages = createDomChannelContents();
         channels[name].messageDom = domMessages;
     }
     
     if(typeof channels[name].userlistDom === 'undefined'){
-        var domUserlist = $('<div class="userlistcontents"></div>');
+        var domUserlist = createDomChannelUserlist();
         channels[name].userlistDom = domUserlist;
     }
     
     if(typeof channels[name].buttonDom === 'undefined'){
-        var domButton = $('<div class="fabutton" title="' + channels[name].title + '"><span id="data" title="' + name + '"></span><span class="fa fa-th"></span></div>');
+        var domButton = createDomChannelButton(isPublic, name, channels[name].title);
         channels[name].buttonDom = domButton; 
     }
     
@@ -376,6 +376,15 @@ function pushFeedItem(type, message){
     if(App.state.currentTool == 'feed' && App.tools['feed'].currentlyDisplaying === false){
         displayQueuedFeedMessages();
     }
+    else {
+        // Increment and show the counter.
+        if(typeof App.tools['feed'].counter !== 'undefined'){
+            App.tools['feed'].counter.text.text(App.tools['feed'].queue.length);
+            App.tools['feed'].counter.image.fadeIn();
+            App.tools['feed'].counter.text.fadeIn();
+                 
+        }
+    }
 }
 
 function displayQueuedFeedMessages(){
@@ -408,7 +417,16 @@ function displayNextFeedMessage(iterate){
     
     // Fade in new message
     domMsg.hide();
-    domMsg.fadeIn(1000);
+    domMsg.fadeIn(1000, function(){
+        // Decrement the feed counter
+        var curCount = App.tools['feed'].counter.text.text();
+        App.tools['feed'].counter.text.text(curCount - 1);
+        if(curCount - 1 <= 0){
+            // fade out
+            App.tools['feed'].counter.image.fadeOut();
+            App.tools['feed'].counter.text.fadeOut();
+        }
+    });
     
     // if the scrollbar is already at the bottom..Scroll down the feed to the new message
     if(autoScroll){
@@ -631,7 +649,6 @@ function postForTicket(account, password){
  */
 
 /* Login */
-
 function createDomLogin(){
     // Construct HTML
     var html = '<div class="maincontainer">';
@@ -706,7 +723,6 @@ function createLoginCharListImageClickListener(characterName){
 }
 
 /* Login Loading */
-
 function createDomLoginLoading(){
     // Construct dom
     var domContainer = $('<div class="maincontainer"></div>');
@@ -725,8 +741,7 @@ function createDomLoginLoading(){
     return domContainer;
 }
 
-/* Main Chat */
-
+/* Main Area */
 function createDomMainChat(){
     var domChatContainer = $('<div class="chatcontainer"></div>');
     
@@ -742,6 +757,9 @@ function createDomMainChat(){
     for(var key in App.consts.tools){
         createDomsTool(domMainMenu, domToolPanel, key);
     } 
+    
+    // Special case the feed counter
+    createFeedMessageCounter();
     
     createDomToolStatus();    
     createDomToolChannelList();
@@ -762,6 +780,7 @@ function createDomMain(){
                 var domChannelList = $('<div id="channenlist"></div>');
                 domChannels.append(domChannelList);
                 App.dom.openChannelList = domChannelList;
+                domChannelList.sortable();
         
             var domChannel = $('<div class="channel"></div>');
             domChatArea.append(domChannel);
@@ -829,7 +848,6 @@ function createDomToolPanel(){
 }
 
 /* All Tools */
-
 function createDomsTool(domMainMenu, domToolPanel, name){
     // Create the doms
     var buttonDom = $('<div class="fabutton" title="' + App.consts.tools[name].title + '"><span class="fa ' + App.consts.tools[name].icon + '"></span></div>');
@@ -856,8 +874,23 @@ function createToolClickListener(name){
     };
 }
 
-/* Individual Tools */
+function createFeedMessageCounter(){
+    App.tools['feed'].counter = {};
+    
+    var domCounter = $('<img class="feedcounter" src="images/feed-counter.png"/>');
+    App.tools['feed'].button.append(domCounter);
+    App.tools['feed'].counter.image = domCounter;
+    
+    var domText = $('<div class="feedcountnumber"></div>');
+    App.tools['feed'].button.append(domText);
+    App.tools['feed'].counter.text = domText;
+    
+    // Hide both for now.
+    domCounter.hide();
+    domText.hide();
+}
 
+/* Individual Tools */
 function createDomToolStatus(){
     
     // Top content (avatar / dropdown + messagebox)
@@ -1026,6 +1059,19 @@ function createDomToolFeedMessage(type, message){
     
     // return 
     return domMsg;
+}
+
+/* Channels */
+function createDomChannelContents(){
+    return $('<div class="channelmessages"></div>');
+}
+
+function createDomChannelUserlist(){
+    return $('<div class="userlistcontents"></div>');
+}
+
+function createDomChannelButton(isPublic, channelName, channelTitle){
+    return $('<div class="fabutton" title="' + channelTitle + '"><span id="data" title="' + channelName + '"></span><span class="fa ' + (isPublic ? 'fa-th' : 'fa-key') + '"></span></div>');
 }
 
 /* Others */

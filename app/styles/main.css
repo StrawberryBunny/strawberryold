@@ -142,6 +142,16 @@ html, body {
     color: #c7c7c7;
 }
 
+.channels .fabutton {
+    background-color: #333333;
+}
+
+.channels .fabuttonselected {
+    background-color: #222222;
+}
+
+
+
 /* Main Chat Area */
 
 .channel {
@@ -228,6 +238,24 @@ html, body {
     background-color: #444444;
 }
 
+/* Feed Button Special Case */
+.fabutton .feedcounter {
+    position: absolute;
+    right: 3px;
+    top: 3px;
+}
+
+.fabutton .feedcountnumber {
+    position: absolute;
+    right: 1px;
+    top: 5px;
+    font-size: 14px;
+    text-align: center;        
+    color: #c7c7c7;
+    width: 28px;
+    height: 24px;
+}
+
 /* Tool Panel */
 
 .toolpanel {
@@ -274,7 +302,7 @@ html, body {
     overflow-y: auto;
     overflow-x: hidden;
     word-wrap: break-word;
-    height: 100%;
+    height: calc(100% - 48px);
 }
 
 .toolfeedmessages {
@@ -414,6 +442,7 @@ html, body {
     cursor: pointer;
     color: #c7c7c7;
     height: 48px;
+    position: relative;
 }
 
 .fabutton:hover {
@@ -423,6 +452,8 @@ html, body {
 .fabuttonselected {
     background-color: #222222;
 }
+
+
 
 .faicon {
     cursor: pointer;
