@@ -279,6 +279,43 @@ function characterWentOffline(character){
     }
 }
 
+function characterJoinedChannel(character, channel){
+    var isPublic = channel.substr(0, 3) !== 'ADH';
+    var channels = isPublic ? App.publicChannels : App.privateChannels;
+    
+    // Add to list..
+    channels[channel].users.push(character);
+    channels[channel].users.sort();
+    
+    // (Re)create userlist dom.
+    channels[channel].userlistDom.empty();
+    for(var i = 0; i < channels[channel].users.length; i++){
+        var charName = channels[channel].users[i];
+        var dom = createDomUserEntry(charName, App.characters[charName].gender, App.characters[charName].status, App.characters[charName].statusmsg);
+        channels[channel].userlistDom.append(dom);
+    }
+}
+
+function characterLeftChannel(character, channel){
+    var isPublic = channel.substr(0, 3) !== 'ADH';
+    var channels = isPublic ? App.publicChannels : App.privateChannels;
+    
+    // Remove from list
+    var removed = channels[channel].users.splice(character, 1);
+    if(typeof removed === 'undefined'){
+        // Tried to remove a character from a room but they weren't in there? Wtf.
+        pushFeedItem('error', 'Server informed us that ' + character + ' left ' + channel + ' but we did not have them listed.');
+        return;
+    }
+    
+    // Remove from list dom.
+    channels[channel].userlistDom.children('.userentry').each(function(){
+        if($(this).attr('title') === character){
+            $(this).remove();
+        }
+    });
+}
+
 /**
  * Channels ========================================================================================================================
  */
@@ -1542,7 +1579,7 @@ function parseServerMessage(message){
         var obj = JSON.parse(message.substr(3));
     }
 
-    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'ORS', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'LIS', 'NLN', 'JCH'];
+    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'ORS', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'LIS', 'NLN', 'JCH', 'LCH'];
     if(dontLog.indexOf(tag) === -1){
         console.log(message);
     }
@@ -1653,6 +1690,7 @@ function parseServerMessage(message){
             break;
         case 'ICH':
             // Initial channel data. Received in response to JCH along with CDS. (userlist, channelname, mode)
+            console.log(message);
 
             // Is this channel public or private?
             var isPublic = obj.channel.substr(0, 3) !== 'ADH';
@@ -1711,6 +1749,9 @@ function parseServerMessage(message){
         case 'JCH':
             // Indicates the given user has joined the given channel. This my also be the client's character.
             // Don't use to know when we've joined a room. Use ICH.
+            if(obj.character.identity !== App.user.loggedInAs){
+                characterJoinedChannel(obj.character.identity, obj.channel);
+            }            
             break;
         case 'KID':
             // Kinks data in response to a KIN command.
@@ -1719,6 +1760,9 @@ function parseServerMessage(message){
             // Indicates that the given user has left the given channel. This may also be the client's character.
             if(obj.character === App.user.loggedInAs){
                 closeChannel(obj.channel);
+            }
+            else {
+                characterLeftChannel(obj.character, obj.channel);
             }
             break;
         case 'LIS':
