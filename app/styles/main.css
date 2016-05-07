@@ -454,6 +454,25 @@ html, body {
     border-color: #222222;
 }
 
+/* Tool - Info */
+.toolinfoscroller {
+    overflow-y: auto;
+    height: 100%;
+}
+
+.toolinfoscrollercontents {
+    padding: 10px;
+}
+
+.toolinfoscrollercontents div {
+    padding: 10px;
+    background-color: #333333;    
+}
+
+.toolinfoscrollercontents div:not(:last-child){
+    margin-bottom: 10px;
+}
+
 /* Global */
 
 .userentry {

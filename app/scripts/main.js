@@ -137,7 +137,10 @@ var App = {
 			transgender: 	'#e86937'
 		},
 		timestamps: true
-	}
+	},
+    changelog: [
+        ['0.2', ['Project restarted. Now using gulp to process ESLint, builds etc.']]
+    ]
 };
 
 /**
@@ -630,8 +633,6 @@ function toolShowLogout(){
  * Layout & Navigation  =========================================================================================================
  */
 
-
-
 function toggleTool(toolName){
     if(App.state.currentTool === toolName){
         toolName = '';
@@ -897,12 +898,15 @@ function createDomMainChat(){
     // Special case the feed counter
     createFeedMessageCounter();
 
+    // Create tool contents.
     createDomToolStatus();
     createDomToolChannelList();
     createDomToolFeed();
     createDomToolViewer();
     createDomToolFriendsList();
+    createDomToolInfo();
 
+    // ret
     return domChatContainer;
 }
 
@@ -1350,6 +1354,33 @@ function createDomFriendsListEntry(sourceName, friendName){
     domContainer.append(domFriendEntryText);
     
     return domContainer;   
+}
+
+function createDomToolInfo(){
+    var domScroller = $('<div class="toolinfoscroller"></div>');
+    App.tools['info'].content.append(domScroller);
+    
+    var domScrollerContents = $('<div class="toolinfoscrollercontents"></div>');
+    domScroller.append(domScrollerContents);
+    
+    console.log("Changelog 0: " + App.changelog[0]);
+    
+    for(var i = App.changelog.length - 1; i >= 0; i--){
+        var dom = $('<div class="changelogentry"></div>');
+        
+        var html = '<p><b>' + App.changelog[i][0] + '</b></p><ul>';
+        
+        var bb;
+        for(var j = 0; j < App.changelog[i][1].length; j++){
+            html += '<li>' + XBBCODE.process({ text: App.changelog[i][1][j] }).html + '</li>';
+        }
+                
+        html += '</ul>'
+        
+        dom.html(html);
+        
+        domScrollerContents.append(dom);
+    }
 }
 
 /* Channels */
