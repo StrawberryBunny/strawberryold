@@ -154,11 +154,11 @@ function sendChatMessage(message, channel){
     });
 
     if(bb.error){
-        var errorMessage = '';
+        var errorMessage = '[ul]';
         for(var i = 0; i < bb.errorQueue.length; i++){
-            errorMessage += bb.errorQueue[i];
-            errorMessage += '<br/>';
+            errorMessage += '[li]' + bb.errorQueue[i] + '[/li]';        
         }
+        errorMessage += '[/ul]'
         pushFeedItem('error', errorMessage);
         return false;
     }
@@ -171,6 +171,27 @@ function sendChatMessage(message, channel){
     
     // Return success
     return true;
+}
+
+function updateStatus(character, status, statusmsg){
+    App.characters[character].status = status;
+    App.characters[character].statusmsg = statusmsg;
+
+    // If us
+    if(character === App.user.loggedInAs){
+        pushFeedItem('info', 'Your status has been updated successfully.');
+    }
+    
+    // Update all instances of userentry for this character.
+    $('.userentry').each(function(){
+        var nameplate = $(this).children('.nameplate');
+        if(nameplate.text() == character){
+            var statusimg = $(this).children('.statusimg');
+            statusimg.attr('src', 'images/status-small-' + status.toLowerCase() + '.png');
+            statusimg.attr('title', stylizeStatus(status));
+            nameplate.attr('title', statusmsg);
+        }
+    });
 }
 
 /**
@@ -691,6 +712,17 @@ function stripWhitespace(str){
 	return str.replace(/ /g,'').replace(/[^\w\s]/gi, '');
 }
 
+function stylizeStatus(status){
+    status = status.toLowerCase();
+    if(status == 'dnd'){
+        status = 'DND';
+    }
+    else {
+        status = status.charAt(0).toUpperCase() + status.substr(1);
+    }
+    return status;
+}
+
 /**
  * JSON Endpoint Helpers ===========================================================================================================
  */
@@ -1183,12 +1215,12 @@ function createDomUserEntry(name, gender, status, statusmsg){
 
     var genderColour = '#444444';
     if(name != 'Description'){
-        var domImg = $('<img src="images/status-small-' + status + '.png" title="' + status + '"/>');
+        var domImg = $('<img class="statusimg" src="images/status-small-' + status.toLowerCase() + '.png" title="' + status + '"/>');
         domContainer.append(domImg);
         genderColour = App.options.genderColours[App.characters[name].gender.toLowerCase()];
     }
 
-    domContainer.append('<div style="color: ' + genderColour + '" title="' + statusmsg + '">' + name + '</div>');
+    domContainer.append('<div class="nameplate" style="color: ' + genderColour + '" title="' + statusmsg + '">' + name + '</div>');
 
     return domContainer;
 }
@@ -1438,7 +1470,7 @@ function parseServerMessage(message){
             for(var i = 0; i < obj.characters.length; i++){
                 App.characters[obj.characters[i][0]] = {
                     gender: obj.characters[i][1],
-                    status: obj.characters[i][2],
+                    status: stylizeStatus(obj.characters[i][2]),
                     statusmsg: obj.characters[i][3]
                 };
                 App.state.listedCount++;
@@ -1469,7 +1501,7 @@ function parseServerMessage(message){
                 App.characters[obj.identity] = {};
             }
             App.characters[obj.identity].gender = obj.gender;
-            App.characters[obj.identity].status = obj.status;
+            App.characters[obj.identity].status = stylizeStatus(obj.status);
 
             // TODO Show a feed item if this user is our friend.
             break;
@@ -1517,13 +1549,7 @@ function parseServerMessage(message){
             break;
         case 'STA':
             // A user changed their status.
-            App.characters[obj.character].status = obj.status;
-            App.characters[obj.character].statusmsg = obj.statusmsg;
-
-            // If us
-            if(obj.character === App.user.loggedInAs){
-                pushFeedItem('info', 'Your status has been updated successfully.');
-            }
+            updateStatus(obj.character, obj.status, obj.statusmsg);
             break;
         case 'SYS':
             // System message from the server.
