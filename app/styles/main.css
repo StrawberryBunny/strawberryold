@@ -407,12 +407,12 @@ html, body {
 /* Tool - Friends List */
 .friendentry {
     display: flex;
-    background-color: #4d4d50;
+    background-color: #333333;
     cursor: pointer;
 }
 
 .friendentry:nth-of-type(odd){
-    background-color: #303031;
+    background-color: #222222;
 }
 
 .friendentry:hover {
