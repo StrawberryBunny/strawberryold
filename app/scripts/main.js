@@ -16,7 +16,9 @@ var App = {
         userlist: null,
         userlistTopBar: null,
         userlistTitle: null,
-        noChannelImage: null
+        noChannelImage: null,
+        mainTextEntry: null,
+        mainTextEntryButton: null
     },
     user: { // Collection for items related to the user.
         account: '',            // String (account name)
@@ -32,7 +34,7 @@ var App = {
         openChannels: [],
         selectedChannel: ''
     },
-    tools: { // A place to store things for each tool: (all tools have a button and content entry for their respective dom elements.) 
+    tools: { // A place to store things for each tool: (all tools have a button and content entry for their respective dom elements.)
        status: {
             dropdown: null,
             textarea: null,
@@ -50,14 +52,14 @@ var App = {
             queue: [],
             filterPMs: null,
             filterMentions: null,
-            filterAlerts: null            
+            filterAlerts: null
         }
     },
     consts: {
         version: '0.2',
         icons: {
             loading: [
-                ['fa-rocket', 'Preparing to blast off.'], 
+                ['fa-rocket', 'Preparing to blast off.'],
                 ['fa-hourglass', 'Please wait.'],
                 ['fa-hourglass-o', 'Please wait.'],
                 ['fa-dashboard', 'Accelerating to 88mph.'],
@@ -88,7 +90,7 @@ var App = {
                 ['fa-floppy', 'Please wait. Lost the little key to the disk box.'],
                 ['fa-link', 'Informing Link that his princess is in another castle and that he\'s in the wrong game.'],
                 ['fa-paperclip', 'One moment. Just giving Clippy his annual beating so he remembers his place.']
-            ]      
+            ]
         },
         tools: {
             feed:       { name: 'feed',         title: 'Feed',              icon: 'fa-feed',                    show: 'toolShowFeed' },
@@ -96,11 +98,11 @@ var App = {
             channels:   { name: 'channels',     title: 'Channel List',      icon: 'fa-th',                      show: 'toolShowChannelList' },
             viewer:     { name: 'viewer',       title: 'Viewer',            icon: 'fa-eye',                     show: 'toolShowViewer' },
             friends:    { name: 'friends',      title: 'Friends',           icon: 'fa-users',                   show: 'toolShowFriends' },
-            pms:        { name: 'pms',          title: 'Private Messages',  icon: 'fa-comments',                show: 'toolShowPMs' },            
+            pms:        { name: 'pms',          title: 'Private Messages',  icon: 'fa-comments',                show: 'toolShowPMs' },
             info:       { name: 'info',         title: 'Info',              icon: 'fa-question',                show: 'toolShowInfo' },
             settings:   { name: 'settings',     title: 'Settings',          icon: 'fa-gears',                   show: 'toolShowSettings' },
             logout:     { name: 'logout',       title: 'Logout',            icon: 'fa-sign-out',                show: 'toolShowLogout' }
-        }    
+        }
     },
     serverVars: {
         chat_max: -1,
@@ -126,13 +128,49 @@ var App = {
 	}
 };
 
-/** 
+/**
  * Global
  */
 
 function throwError(message){
     console.log(message);
     pushFeedItem('error', message);
+}
+
+function sendChatMessageToActiveWindow(message){
+    return sendChatMessage(message, App.state.selectedChannel);
+}
+
+function sendChatMessage(message, channel){
+    // Check for bullcrap
+    var strippedMessage = stripWhitespace(message);
+    if(message == '' || strippedMessage == '' || strippedMessage.length == 0 || channel == '' || channel.length == 0){
+        return false;
+    }
+
+    // Check for malformed BBCODE
+    var bb = XBBCODE.process({
+        text: message
+    });
+
+    if(bb.error){
+        var errorMessage = '';
+        for(var i = 0; i < bb.errorQueue.length; i++){
+            errorMessage += bb.errorQueue[i];
+            errorMessage += '<br/>';
+        }
+        pushFeedItem('error', errorMessage);
+        return false;
+    }
+
+    // Send message to server
+    sendMessageToServer('MSG { "channel": "' + channel + '", "message": "' + message + '" }')
+
+    // Add the message to the chat window
+    receiveMessage(channel, App.user.loggedInAs, message);
+    
+    // Return success
+    return true;
 }
 
 /**
@@ -145,21 +183,21 @@ function selectChannel(name){
         // Do nothing.
         return;
     }
-    
+
     // Turn off the currently selected channel?
     if(App.state.selectedChannel !== ''){
         // Is the selected channel public or private?
         var isPublic = App.state.selectedChannel.substr(0, 3) !== 'ADH';
-        
+
         // get the channel list it belongs to
         var channels = isPublic ? App.publicChannels : App.privateChannels;
-        
+
         // Remove the message dom.
         channels[App.state.selectedChannel].messageDom.remove();
-        
+
         // Remove the userlist
         channels[App.state.selectedChannel].userlistDom.remove();
-        
+
         // Deselect the channel's button
         channels[App.state.selectedChannel].buttonDom.removeClass('fabuttonselected');
     }
@@ -167,7 +205,7 @@ function selectChannel(name){
         // Turn off the no-channel stuff
         App.dom.noChannelImage.hide();
     }
-    
+
     // Turn on the new channel.
     if(name == ''){
         App.dom.noChannelImage.show();
@@ -176,26 +214,26 @@ function selectChannel(name){
     else {
         // Is the new chanel public or private?
         var isPublic = name.substr(0, 3) !== 'ADH';
-        
+
         // Get the channel list
         var channels = isPublic ? App.publicChannels : App.privateChannels;
-        
+
         // Attach the message dom
         App.dom.channelContents.append(channels[name].messageDom);
-        
+
         // Attach the userlist
         App.dom.userlist.append(channels[name].userlistDom);
-        
+
         // Select the channel's button
         channels[name].buttonDom.addClass('fabuttonselected');
-        
+
         // Change the current title.
         App.dom.userlistTitle.text(channels[name].title);
-        
+
         // Ensure the userlist title bar is showing
         App.dom.userlistTopBar.css('display', 'flex');
     }
-    
+
     // Set newly selected channel
     App.state.selectedChannel = name;
 }
@@ -206,56 +244,54 @@ function joinChannel(name){
 }
 
 function openChannel(name){
-    console.log("Opening channel: " + name);
-    
     // Is this channel already open?
     if(App.state.openChannels.indexOf(name) !== -1){
         throwError('Trying to open a channel that is already open.');
         return;
     }
-        
+
     // Is this a public or private channel?
     var isPublic = name.substr(0, 3) !== 'ADH';
-    
+
     // Get the list of channels.
     var channels = isPublic ? App.publicChannels : App.privateChannels;
-    
+
     // Push into the list of open channels.
     App.state.openChannels.push(name);
-    
+
     // Do we need to create doms for this channel?
     if(typeof channels[name].messageDom === 'undefined'){
         var domMessages = createDomChannelContents();
         channels[name].messageDom = domMessages;
     }
-    
+
     if(typeof channels[name].userlistDom === 'undefined'){
         var domUserlist = createDomChannelUserlist();
         channels[name].userlistDom = domUserlist;
     }
-    
+
     if(typeof channels[name].buttonDom === 'undefined'){
         var domButton = createDomChannelButton(isPublic, name, channels[name].title);
-        channels[name].buttonDom = domButton; 
+        channels[name].buttonDom = domButton;
     }
-    
+
     // Append the dom button to the channel list.
     App.dom.openChannelList.append(channels[name].buttonDom);
-    
+
     // Add the click listener to the dom button
     channels[name].buttonDom.click(function(){
-        console.log("clicky");
         var channelName = $(this).find('#data').attr('title');
         selectChannel(channelName);
-    });     
-    
+    });
+
     // (Re)Create the userlist
-    channels[name].userlistDom.empty(); 
+    channels[name].userlistDom.empty();
     for(var i = 0; i < channels[name].users.length; i++){
-        var dom = createDomUserEntry(channels[name].users[i]);
+        var charName = channels[name].users[i];
+        var dom = createDomUserEntry(charName, App.characters[charName].gender, App.characters[charName].status, App.characters[charName].statusmsg);
         channels[name].userlistDom.append(dom);
     }
-    
+
     // If no channel is selected, select this one
     if(App.state.selectedChannel == ''){
         selectChannel(name);
@@ -273,22 +309,22 @@ function closeChannel(name){
         pushFeedItem('error', 'Tried to close channel ' + name + ' when it isn\'t open.');
         return;
     }
-    
+
     // Was the channel public?
     var isPublic = name.substr(0, 3) !== 'ADH';
     var channels = isPublic ? App.publicChannels : App.privateChannels;
-    
+
     // Get the index of our button in the list of buttons.
     var removeIndex = App.state.openChannels.indexOf(name);
-    
+
     // Remove doms.
     channels[name].buttonDom.remove();
     channels[name].messageDom.remove();
     channels[name].userlistDom.remove();
-    
+
     // remove form open channel list
     App.state.openChannels.splice(removeIndex, 1);
-    
+
     // If there are no channels to move to show the no channel stuff.
     if(App.state.openChannels.length == 0){
         App.dom.noChannelImage.show();
@@ -299,10 +335,10 @@ function closeChannel(name){
         // what channel should we select next?
         removeIndex -= 1;
         if(removeIndex < 0) removeIndex = 0;
-        
+
         // get the button dom
         var newChannelName = App.state.openChannels[removeIndex];
-        
+
         // Select the channel
         selectChannel(newChannelName);
     }
@@ -315,7 +351,7 @@ function receiveMessage(channel, character, message){
         channels[channel].messages = [];
     }
     channels[channel].messages.push([character, message]);
-    
+
     // Create dom
     var dom = createDomMessage(character, message);
     channels[channel].messageDom.append(dom);
@@ -335,7 +371,7 @@ function updateStatusForm(){
 function refreshChannels(){
     // Start the refesh button spinning
     App.tools['channels'].refreshbutton.addClass('fa-spin');
-    
+
     // Send request message
     sendMessageToServer('CHA');
 }
@@ -343,32 +379,32 @@ function refreshChannels(){
 function channelListUpdated(){ // Called from parseServerMessage() when the channel list has been updated
     // Stop the refresh button spinning
     App.tools['channels'].refreshbutton.removeClass("fa-spin");
-    
+
     // Clear any existing channel entries
     App.tools['channels'].entryPush.empty();
     App.tools['channels'].channelEntries = [];
-    
+
     // Add a title seperator for "Public Channels"
     var sepDom = $('<div class="channellistseperator">Public Channels</div>');
     App.tools['channels'].entryPush.append(sepDom);
-    
+
     var publicList = [];
     // Sort the entries
     for(var key in App.publicChannels){
         publicList.push(key);
     }
-    publicList.sort();   
-       
+    publicList.sort();
+
     // Create entries for each channel
     for(var i = 0; i < publicList.length; i++){
         var dom = createDomChannelListEntry(App.publicChannels[publicList[i]].name, App.publicChannels[publicList[i]].name, App.publicChannels[publicList[i]].characterCount);
         App.tools['channels'].entryPush.append(dom);
     }
-    
+
     // Add a title seperator for "Private Channels"
     var sepDom = $('<div class="channellistseperator">Private Channels</div>');
-    App.tools['channels'].entryPush.append(sepDom);    
-    
+    App.tools['channels'].entryPush.append(sepDom);
+
     var privateList = [];
     for(var key in App.privateChannels){
         privateList.push([App.privateChannels[key].title, key]);
@@ -376,12 +412,12 @@ function channelListUpdated(){ // Called from parseServerMessage() when the chan
     privateList.sort(function(a, b){
         var titleA = a[0].toLowerCase();
         var titleB = b[0].toLowerCase();
-        
+
         if(titleA < titleB) return -1;
         if(titleA > titleB) return 1;
         return 0;
     });
-    
+
     // Create entires
     for(var i = 0; i < privateList.length; i++){
         var dom = createDomChannelListEntry(privateList[i][1], privateList[i][0], App.privateChannels[privateList[i][1]].characterCount);
@@ -395,10 +431,10 @@ function pushFeedItem(type, message){
     var bb = XBBCODE.process({
         text: message
     });
-    
+
     // Push message into queue
     App.tools['feed'].queue.push([type, bb.html]);
-    
+
     // If the feed is open, display the message immediately.
     if(App.state.currentTool == 'feed' && App.tools['feed'].currentlyDisplaying === false){
         displayQueuedFeedMessages();
@@ -409,7 +445,7 @@ function pushFeedItem(type, message){
             App.tools['feed'].counter.text.text(App.tools['feed'].queue.length);
             App.tools['feed'].counter.image.fadeIn();
             App.tools['feed'].counter.text.fadeIn();
-                 
+
         }
     }
 }
@@ -419,29 +455,29 @@ function displayQueuedFeedMessages(){
     if(App.tools['feed'].currentlyDisplaying){
         return;
     }
-    
+
     if(App.tools['feed'].queue.length > 0){
         App.tools['feed'].currentlyDisplaying = true;
         displayNextFeedMessage(true);
     }
-    
+
 }
 
 function displayNextFeedMessage(iterate){
     // Get scroller
     var domScroller = App.tools['feed'].scroller;
     var domMessageContainer = App.tools['feed'].messagePush;
-    
+
     // Is the scrollbar at the bottom?
     var autoScroll = domScroller.scrollTop() >= domScroller[0].scrollHeight - domScroller.height();
-    
+
     // Create dom
     var feedEntry = App.tools['feed'].queue.shift();
     var domMsg = createDomToolFeedMessage(feedEntry[0], feedEntry[1]);
-    
+
     // Append dom to feed content.
     App.tools['feed'].messagePush.append(domMsg);
-    
+
     // Fade in new message
     domMsg.hide();
     domMsg.fadeIn(1000, function(){
@@ -454,7 +490,7 @@ function displayNextFeedMessage(iterate){
             App.tools['feed'].counter.text.fadeOut();
         }
     });
-    
+
     // if the scrollbar is already at the bottom..Scroll down the feed to the new message
     if(autoScroll){
         App.tools['feed'].scroller.stop();
@@ -462,7 +498,7 @@ function displayNextFeedMessage(iterate){
             scrollTop: App.tools['feed'].messagePush.height()
         }, 1000);
     }
-    
+
     // If iterate
     if(iterate && App.tools['feed'].queue.length > 0){
         setTimeout(createNextFeedMessageTimeoutCallback(iterate), 800);
@@ -494,15 +530,15 @@ function toolShowChannelList(){
 }
 
 function toolShowViewer(){
-    
+
 }
 
 function toolShowFriends(){
-    
+
 }
 
 function toolShowPMs(){
-    
+
 }
 
 function toolShowFeed(){
@@ -510,42 +546,42 @@ function toolShowFeed(){
 }
 
 function toolShowInfo(){
-    
+
 }
 
 function toolShowSettings(){
-    
+
 }
 
 function toolShowLogout(){
-    
+
 }
 
 
-/** 
+/**
  * Layout & Navigation  =========================================================================================================
  */
 
 function logInComplete(character){
     // Set logged in user
     App.user.loggedInAs = character;
-    
+
     // Set the loading texts
     $('#loadingtext').text('Identification successful.');
     $('#loadingtext2').text('Enjoy using Strawberry!');
-    
+
     // Replace hand
     $('.loginloadingcontent span').removeClass();
     var rpslz = [ 'fa-hand-rock-o', 'fa-hand-paper-o', 'fa-hand-scissors-o', 'fa-hand-lizard-o', 'fa-hand-spock-o'];
     $('.loginloadingcontent span').addClass('fa ' + rpslz[Math.floor(Math.random() * rpslz.length)]);
     $('.loginloadingcontent span').attr('title', 'SCISSORS cuts PAPER covers ROCK crushes LIZARD poisons SPOCK smashes SCISSORS decapitates LIZARD eats PAPER disproves SPOCK vaporizes ROCK crushes SCISSORS');
-    
+
     // Request server information
     sendMessageToServer('UPT');
-    
+
     // Push message
     pushFeedItem('info', 'Logged in as [icon]' + character + '[/icon]');
-    
+
     // Wait for rest of server data to be brought down.
 }
 
@@ -553,33 +589,33 @@ function toggleTool(toolName){
     if(App.state.currentTool === toolName){
         toolName = '';
     }
-    
+
     // Turn off the old tool
     if(App.state.currentTool !== ''){
         // Hide the content dom
         App.tools[App.state.currentTool].content.hide();
-        
+
         // Turn off the button highlight
         App.tools[App.state.currentTool].button.removeClass('fabuttonselected');
     }
-    
+
     // Turn on new tool
     if(toolName !== ''){
         // Show the content dom
         App.tools[toolName].content.show();
-        
+
         // Turn on the button highlight
         App.tools[toolName].button.addClass('fabuttonselected');
     }
-    
+
     // Set as current tool
     App.state.currentTool = toolName;
-    
+
     // Let this tool perform anything it needs to do when it's shown.
     if(toolName !== ''){
         window[App.consts.tools[toolName].show]();
     }
-    
+
     // Layout
     layout();
 }
@@ -639,6 +675,10 @@ function msToTime(duration) {
     return days + ' days ' + hours + ' hours, ' + minutes + ' minutes, ' + seconds + ' seconds';
 }
 
+function stripWhitespace(str){
+	return str.replace(/ /g,'').replace(/[^\w\s]/gi, '');
+}
+
 /**
  * JSON Endpoint Helpers ===========================================================================================================
  */
@@ -660,10 +700,10 @@ function postForTicket(account, password){
                 App.user.account = account;
                 App.user.ticket = data.ticket;
                 App.user.characters = data.characters;
-                
+
                 // Hide the login container
                 $('.maincontainer').remove();
-                    
+
                 // Create the login character selector dom
                 $('body').append(createDomLoginCharacterSelector());
             }
@@ -693,19 +733,19 @@ function createDomLogin(){
             html += '<div class="loginalert"></div>';
         html += '</div>';
     html += '</div>';
-    
+
     // Create dom
     var dom = $(html);
-    
-    // Add listeners    
+
+    // Add listeners
     dom.find('#btnsubmit').click(function(e){
         // Prevent default button behaviour
         e.preventDefault();
-        
+
         // Attempt to log in
-        postForTicket($('#acc').val(), $('#pwd').val());        
+        postForTicket($('#acc').val(), $('#pwd').val());
     });
-        
+
     // Done
     return dom;
 }
@@ -713,24 +753,24 @@ function createDomLogin(){
 function createDomLoginCharacterSelector(){
     // Sort the user list
     App.user.characters.sort();
-    
+
     // Construct DOM
     var domContainer = $('<div class="maincontainer"></div>');
     var domContent = $('<div class="maincontent"></div>');
-    
+
     domContainer.append(domContent);
-    
+
     // Loop and create character icon clickers.
     for(var i = 0; i < App.user.characters.length; i++){
         var characterName = App.user.characters[i];
         var escapedName = escapeHtml(characterName).toLowerCase();
         var domImage = $('<img class="charicon img-rounded" title="' + characterName + '" src="https://static.f-list.net/images/avatar/' + escapedName + '.png" width="100px" height="100px"/>');
         domContent.append(domImage);
-        
+
         // listener
         domImage.click(createLoginCharListImageClickListener(characterName));
     }
-        
+
     return domContainer;
 }
 
@@ -738,10 +778,10 @@ function createLoginCharListImageClickListener(characterName){
     return function(){
         // Hide the login char list
         $('.maincontainer').remove();
-        
-        // Show the loading dom 
+
+        // Show the loading dom
         $('body').append(createDomLoginLoading());
-        
+
         // Open the websocket
         $('#loadingtext').text('Attempting to connect to server.');
         //openWebSocket(App.user.account, App.user.ticket, characterName);
@@ -755,107 +795,126 @@ function createDomLoginLoading(){
     var domContainer = $('<div class="maincontainer"></div>');
     var domContent = $('<div class="maincontent"></div>');
     var domLL = $('<div class="loginloadingcontent"></div>');
-        
+
     domContainer.append(domContent);
     domContent.append(domLL);
-    
+
     // select a random loading icon + flavour text to display.
     var index = Math.floor(Math.random() * App.consts.icons.loading.length);
     domLL.append('<span class="loadingicon fa fa-spin ' + App.consts.icons.loading[index][0] + '"></span>');
     domLL.append('<p id="loadingtext">Attempting to identify with server.<p>');
     domLL.append('<p id="loadingtext2">' + App.consts.icons.loading[index][1] + '</p>');
-    
+
     return domContainer;
 }
 
 /* Main Area */
 function createDomMainChat(){
     var domChatContainer = $('<div class="chatcontainer"></div>');
-    
+
     var domMain = createDomMain();
     var domToolPanel = createDomToolPanel();
     var domMainMenu = createDomMainMenu();
-    
+
     domChatContainer.append(domMain);
     domChatContainer.append(domToolPanel);
-    domChatContainer.append(domMainMenu);  
-    
+    domChatContainer.append(domMainMenu);
+
     // Create tools
     for(var key in App.consts.tools){
         createDomsTool(domMainMenu, domToolPanel, key);
-    } 
-    
+    }
+
     // Special case the feed counter
     createFeedMessageCounter();
-    
-    createDomToolStatus();    
+
+    createDomToolStatus();
     createDomToolChannelList();
     createDomToolFeed();
-        
+
     return domChatContainer;
 }
 
 function createDomMain(){
     var domMain = $('<div class="main"></div>');
-    
+
         var domChatArea = $('<div class="chatarea"></div>');
         domMain.append(domChatArea);
-        
+
             var domChannels = $('<div class="channels"></div>');
             domChatArea.append(domChannels);
-            
+
                 var domChannelList = $('<div id="channenlist"></div>');
                 domChannels.append(domChannelList);
                 App.dom.openChannelList = domChannelList;
                 domChannelList.sortable();
-        
+
             var domChannel = $('<div class="channel"></div>');
             domChatArea.append(domChannel);
-        
+
                 var domChannelContents = $('<div class="channelcontents"></div>');
                 domChannel.append(domChannelContents);
                 App.dom.channelContents = domChannelContents;
-                
+
                     var domNoChannelWrapper = $('<div class="nochannelwrapper"></div>');
-                    domChannelContents.append(domNoChannelWrapper);   
-                    App.dom.noChannelImage = domNoChannelWrapper;             
-                    
+                    domChannelContents.append(domNoChannelWrapper);
+                    App.dom.noChannelImage = domNoChannelWrapper;
+
                         domNoChannelWrapper.append('<img id="nochannelimage" src="images/strawberry-alpha.png"/>');
-        
+
             var domUserList = $('<div class="userlist"></div>');
             domChatArea.append(domUserList);
-        
+
                 var domUserListTopBar = $('<div class="userlisttopbar"></div>');
                 domUserList.append(domUserListTopBar);
                 App.dom.userlistTopBar = domUserListTopBar;
-                
+
                     var domUserListTitle = $('<span id="userlistchanneltitle">An even longer title than before</span>');
                     domUserListTopBar.append(domUserListTitle);
                     App.dom.userlistTitle = domUserListTitle;
-                    
+
                     var domUserListCloseButton = $('<span id="userlistclosebutton" class="famuted fa fa-remove" title="Close Channel"></span>');
                     domUserListTopBar.append(domUserListCloseButton);
                     domUserListCloseButton.click(createUserListCloseButtonClickCallback());
-                                
+
                 var domUserListScroller = $('<div class="userlistscroller"></div>');
                 domUserList.append(domUserListScroller);
                 App.dom.userlist = domUserListScroller;
-                
+
     var domTextEntry = $('<div class="textentry"></div>');
     domMain.append(domTextEntry);
-    
+
         var domMainInput = $('<div class="maininputcontainer"></div>');
         domTextEntry.append(domMainInput);
-        
-            domMainInput.append('<textarea id="maininput"></textarea>');
-        
+
+            var domTextArea = $('<textarea id="maininput"></textarea>');
+            domMainInput.append(domTextArea);
+            App.dom.mainTextEntry = domTextArea;
+            domTextArea.on('keypress', function(e){
+                if(e.which == 13 && !e.shiftKey){
+                    e.preventDefault();
+                    var result = sendChatMessageToActiveWindow(App.dom.mainTextEntry.val());
+                    if(result){
+                        App.dom.mainTextEntry.val("");
+                    }
+                }
+            });
+
         var domBottomButtons = $('<div class="bottombuttons"></div>');
         domTextEntry.append(domBottomButtons);
-        
-            domBottomButtons.append('<button id="btnsendmessage" type="submit" class="btn btn-default" autocomplete="off">Send</button>');
-            
-    
-    return domMain;    
+
+            var domTextEntryButton = $('<button id="btnsendmessage" type="submit" class="btn btn-default" autocomplete="off">Send</button>');
+            domBottomButtons.append(domTextEntryButton);
+            App.dom.mainTextEntryButton = domTextEntryButton;
+            domTextEntryButton.click(function(e){
+                e.preventDefault();
+                var result = sendChatMessageToActiveWindow(App.dom.mainTextEntry.val());
+                if(result){
+                    App.dom.mainTextEntry.val("");
+                }
+            });
+
+    return domMain;
 }
 
 function createUserListCloseButtonClickCallback(){
@@ -865,7 +924,7 @@ function createUserListCloseButtonClickCallback(){
 }
 
 function createDomMainMenu(){
-    var domMainMenu = $('<div class="mainmenu"></div>');                    
+    var domMainMenu = $('<div class="mainmenu"></div>');
     return domMainMenu;
 }
 
@@ -879,18 +938,18 @@ function createDomsTool(domMainMenu, domToolPanel, name){
     // Create the doms
     var buttonDom = $('<div class="fabutton" title="' + App.consts.tools[name].title + '"><span class="fa ' + App.consts.tools[name].icon + '"></span></div>');
     var contentDom = $('<div class="toolcontainer tool' + name + '"></div>');
-    
+
     // Append these doms.
     domMainMenu.append(buttonDom);
     domToolPanel.append(contentDom);
-    
+
     // Store this tool's doms.
     if(typeof App.tools[name] === 'undefined'){
          App.tools[name] = {};
     }
     App.tools[name].button = buttonDom;
     App.tools[name].content = contentDom;
-    
+
     // Attach click listener
     buttonDom.click(createToolClickListener(name));
 }
@@ -903,15 +962,15 @@ function createToolClickListener(name){
 
 function createFeedMessageCounter(){
     App.tools['feed'].counter = {};
-    
+
     var domCounter = $('<img class="feedcounter" src="images/feed-counter.png"/>');
     App.tools['feed'].button.append(domCounter);
     App.tools['feed'].counter.image = domCounter;
-    
+
     var domText = $('<div class="feedcountnumber"></div>');
     App.tools['feed'].button.append(domText);
     App.tools['feed'].counter.text = domText;
-    
+
     // Hide both for now.
     domCounter.hide();
     domText.hide();
@@ -919,50 +978,50 @@ function createFeedMessageCounter(){
 
 /* Individual Tools */
 function createDomToolStatus(){
-    
+
     // Top content (avatar / dropdown + messagebox)
     var domContent = $('<div id="toolstatuscontenttop"></div>');
-    
+
     var domAvatar = $('<img id="statusavatar" class="img-rounded" src="https://static.f-list.net/images/avatar/strawberry.png" title="Strawberry"/>');
-    domContent.append(domAvatar);    
-    
+    domContent.append(domAvatar);
+
     var domFormContainer = $('<div id="statusform"></div>');
     domContent.append(domFormContainer);
-    
+
     var domDropDown = $('<select id="statusdd" name="status"><option value="online">Online</option><option value="looking">Looking</option><option value="busy">Busy</option><option value="away">Away</option><option value="dnd">DND</option></select>');
     domFormContainer.append(domDropDown);
-    
+
     var domTextArea = $('<textarea id="statusmessage"></textarea>');
     domFormContainer.append(domTextArea);
-    
+
     // Append
     App.tools['status'].content.append(domContent);
-    
+
     // bottom content
     var botContent = $('<div id="toolstatuscontentbottom"></div>');
     App.tools['status'].content.append(botContent);
-    
+
     var btnReset = $('<button id="btnstatusreset" type="submit" class="btn btn-default">Reset</button>');
     botContent.append(btnReset);
     btnReset.click(function(){
         updateStatusForm();
     });
-    
+
     var btnUpdate = $('<button id="btnstatusupdate" type="submit" class="btn btn-default">Update</button>');
     botContent.append(btnUpdate);
     btnUpdate.click(function(){
         // Send Message
         sendMessageToServer('STA { "status": "' + App.tools['status'].dropdown.val() + '", "statusmsg": "' + App.tools['status'].textarea.val() + '" }');
-        
+
         // Disable Update button
         App.tools['status'].updatebutton.addClass('disabled');
-        
+
         // Timeout
         setTimeout(function(){
             App.tools['status'].updatebutton.removeClass('disabled');
         }, 5000);
     });
-    
+
     // store
     App.tools['status'].dropdown = domDropDown;
     App.tools['status'].textarea = domTextArea;
@@ -973,22 +1032,22 @@ function createDomToolChannelList(){
     // Title Bar
     var domTitleBar = $('<div class="tooltopbar"></div>');
     App.tools['channels'].content.append(domTitleBar);
-    
+
     // buttons
     var btnNew = $('<span class="faicon fa fa-plus" title="New Channel"></span>');
     domTitleBar.append(btnNew);
-    
+
     var btnRefresh = $('<span class="faicon fa fa-refresh" title="Refresh"></span>');
     domTitleBar.append(btnRefresh);
     App.tools['channels'].refreshbutton = btnRefresh;
     btnRefresh.click(function(){
         refreshChannels();
     });
-    
-    // Scroller   
+
+    // Scroller
     var domScroller = $('<div class="toolchannellistscroller"></div>');
     App.tools['channels'].content.append(domScroller);
-    
+
     // Push
     var domEntryPush = $('<div class="toolchannellistentries"></div>');
     domScroller.append(domEntryPush);
@@ -997,44 +1056,44 @@ function createDomToolChannelList(){
 
 function createDomChannelListEntry(channelName, channelTitle, characterCount){
     var domContainer = $('<div class="channellistentry"></div>');
-    
+
     var domRoomName = $('<div>' + channelTitle + '</div>');
     domContainer.append(domRoomName);
-    
+
     var domCharCount = $('<div>' + characterCount + '</div>');
     domContainer.append(domCharCount);
-    
+
     var domHidden = $('<span id="data" title="' + channelName + '" style="display: none;"></span>')
     domContainer.append(domHidden);
-    
+
     domContainer.click(function(){
         // Get the hidden data.
         var channelName = $(this).find("#data").attr('title');
         joinChannel(channelName);
     });
-        
+
     return domContainer;
 }
 
 function createDomToolFeed(){
     var domTitleBar = $('<div class="tooltopbar"></div>');
     App.tools['feed'].content.append(domTitleBar);
-    
+
     // buttons
     var btnFilterPM = $('<span class="faicon fa fa-comments" title="Turn off PMs"></span>');
     domTitleBar.append(btnFilterPM);
-    
+
     var btnFilterMentions = $('<span class="faicon fa fa-commenting" title="Turn off Mentions"></span>');
     domTitleBar.append(btnFilterMentions);
-    
+
     var btnFilterAlerts = $('<span class="faicon fa fa-exclamation-triangle" title="Turn off Alerts"></span>');
     domTitleBar.append(btnFilterAlerts);
-    
+
     // scroller
     var domScroller = $('<div class="toolfeedscroller"></div>');
-    App.tools['feed'].content.append(domScroller);    
+    App.tools['feed'].content.append(domScroller);
     App.tools['feed'].scroller = domScroller;
-    
+
     // Push
     var domMessages = $('<div class="toolfeedmessages"></div>');
     domScroller.append(domMessages);
@@ -1044,11 +1103,11 @@ function createDomToolFeed(){
 function createDomToolFeedMessage(type, message){
     // Create a message dom for this message.
     var domMsg = $('<div class="feedmessage"></div>');
-        
-    // Top bar    
+
+    // Top bar
     var topBar = $('<div class="feedmessagetopbar"></div>');
     domMsg.append(topBar);
-    
+
     // Title
     var typeText = type;
     switch(type){
@@ -1059,32 +1118,32 @@ function createDomToolFeedMessage(type, message){
             typeText = 'Error';
             break;
     }
-    
-    
+
+
     var title = $('<span class="feedtitle">' + typeText + '</span>');
     topBar.append(title);
-        
+
     // Close button
     var btnClose = $('<span class="famuted fa fa-times"></div>');
-    topBar.append(btnClose);   
+    topBar.append(btnClose);
     btnClose.click(function(){
         $(this).parent().parent().slideUp("slow", function(){
             $(this).remove();
         });
     });
-    
+
     // Message
     var msg = $('<div class="feedmessagemessage">' + message + '</div>');
     domMsg.append(msg);
-    
+
     // Extra classes
     switch(type){
         case 'error':
             domMsg.addClass('error');
             break;
     }
-    
-    // return 
+
+    // return
     return domMsg;
 }
 
@@ -1107,28 +1166,45 @@ function createDomAlert(message){
     return $('<div class="alert alert-danger fade in"><a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a><strong>Error!</strong> ' + message + '</div>');
 }
 
-function createDomUserEntry(name){
+function createDomUserEntry(name, gender, status, statusmsg){
     var domContainer = $('<div class="userentry"></div>');
-    
-    var niceStatus = App.characters[name].status.charAt(0).toUpperCase() + App.characters[name].status.substr(1);
-    var domImg = $('<img src="images/status-small-' + App.characters[name].status + '.png" title="' + niceStatus + '"/>');
-    domContainer.append(domImg);
-    
-    var genderColour = App.options.genderColours[App.characters[name].gender.toLowerCase()];
-    
-    domContainer.append('<div style="color: ' + genderColour + '" title="' + App.characters[name].statusmsg + '">' + name + '</div>');
-    
+
+    var genderColour = '#444444';
+    if(name != 'Description'){
+        var domImg = $('<img src="images/status-small-' + status + '.png" title="' + status + '"/>');
+        domContainer.append(domImg);
+        genderColour = App.options.genderColours[App.characters[name].gender.toLowerCase()];
+    }
+
+    domContainer.append('<div style="color: ' + genderColour + '" title="' + statusmsg + '">' + name + '</div>');
+
     return domContainer;
 }
 
 function createDomMessage(character, message){
     var domContainer = $('<div class="message"></div>');
     
-    var userEntry = createDomUserEntry(character);
-    domContainer.append(userEntry);
+    var finalMessage = '';
+    if(character.toLowerCase() != 'description'){
+        var gender = App.characters[character].gender;
+        var status = App.characters[character].status;
+        var statusmsg = App.characters[character].statusmsg;
+        var userEntry = createDomUserEntry(character, gender, status, statusmsg);
+        domContainer.append(userEntry);
+        finalMessage = ': ';
+    }
+    else {
+        finalMessage = '<b>Description</b>: ';
+    }
     
-    domContainer.append('<div class="messagetext">: ' + message + '</div>');
+    var bb = XBBCODE.process({
+        text: message
+    });
     
+    finalMessage += bb.html;    
+
+    domContainer.append('<div class="messagetext">' + finalMessage + '</div>');
+
     return domContainer;
 }
 
@@ -1143,26 +1219,26 @@ function sendMessageToServer(message){
 function openWebSocket(account, ticket, characterName){
     // Create websocket
     App.connection = new WebSocket('ws://chat.f-list.net:8722');
-    
+
     // Add listeners
     App.connection.onopen = function(){
         // Attempt to identify with the server
         var command = 'IDN { "method": "ticket", "account": "' + account + '", "ticket": "' + ticket + '", "character": "' + characterName + '", "cname": "strawberry", "cversion": "' + App.consts.version + '" }';
         sendMessageToServer(command);
-        
+
         // Update message
         $('#loadingtext').text('Attempting to identify with server.');
     };
-    
+
     App.connection.onerror = function(error){
         // TODO Display this error.
         console.log('WebSocket error: ' + error);
     };
-    
+
     App.connection.onmessage = function(e){
-        parseServerMessage(e.data); 
+        parseServerMessage(e.data);
     };
-    
+
     App.connection.onclose = function(e){
         // TODO Alert the user.
         console.log('WebSocket closed with code: ' + e.code + ', reason: ' + e.reason + ', wasClean: ' + e.wasClean);
@@ -1173,16 +1249,16 @@ function openWebSocket(account, ticket, characterName){
 
 function parseServerMessage(message){
     var tag = message.substr(0, 3);
-           
+
     if(message.length > 3){
         var obj = JSON.parse(message.substr(3));
     }
-    
-    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL'];    
+
+    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'LIS', 'NLN', 'JCH'];
     if(dontLog.indexOf(tag) === -1){
         console.log(message);
     }
-        
+
     switch(tag){
         case 'ADL':
             // Receives the current list of chatops
@@ -1197,26 +1273,26 @@ function parseServerMessage(message){
             break;
         case 'CDS':
             // A channel's description has changed. (Also sent in response to JCH)
-            // TODO push this message into the channel
+            receiveMessage(obj.channel, 'Description', obj.description);
             break;
         case 'CHA':
             // Receiving a list of all public channels.
-            
+
             // Update our list of channels.
             for(var i = 0; i < obj.channels.length; i++){
                 if(typeof App.publicChannels[obj.channels[i].name] === 'undefined'){
                     App.publicChannels[obj.channels[i].name] = {};
                 }
-                
+
                 App.publicChannels[obj.channels[i].name].name = obj.channels[i].name;
                 App.publicChannels[obj.channels[i].name].title = obj.channels[i].name;
                 App.publicChannels[obj.channels[i].name].mode = obj.channels[i].mode;
                 App.publicChannels[obj.channels[i].name].characterCount = obj.channels[i].characters;
-            }            
-            
+            }
+
             // Now request a list of all private channels.
             sendMessageToServer('ORS');
-            
+
             /*
             // Inform dom
             channelListUpdated();
@@ -1239,7 +1315,7 @@ function parseServerMessage(message){
             // Gives a list of chat ops. Sent in response to JCH
             var isPublic = obj.channel.substr(0, 3) !== 'ADH';
             var channels = isPublic ? App.publicChannels : App.privateChannels;
-            channels[obj.channel].ops = obj.oplist;            
+            channels[obj.channel].ops = obj.oplist;
             break;
         case 'CON':
             // The number of connected users. Received after connecting and identifying.
@@ -1257,7 +1333,7 @@ function parseServerMessage(message){
             break;
         case 'DOP':
             // The given character has been stripped of chat op status.
-            break;        
+            break;
         case 'ERR':
             console.log('================== ERROR ===================');
             console.log(message);
@@ -1268,7 +1344,7 @@ function parseServerMessage(message){
                     // Indentification failed.
                     servErrorIdentification();
                     break;
-            }             
+            }
             break;
         case 'FKS':
             // Send as a response to the client's FKS command, containing the results of the search.
@@ -1286,12 +1362,11 @@ function parseServerMessage(message){
             break;
         case 'ICH':
             // Initial channel data. Received in response to JCH along with CDS. (userlist, channelname, mode)
-            console.log("ICH: " + obj.channel);
-            
+
             // Is this channel public or private?
             var isPublic = obj.channel.substr(0, 3) !== 'ADH';
             var channels = isPublic ? App.publicChannels : App.privateChannels;
-            
+
             // Do we have any info for this channel?
             if(typeof channels[obj.channel] === 'undefined'){
                 channels[obj.channel] = {
@@ -1300,19 +1375,19 @@ function parseServerMessage(message){
                     mode: 'unknown'
                 };
             }
-            
+
             // Store user list. Wipe out any existing userlist, we're getting a new, whole one.
             channels[obj.channel].users = [];
             for(var i = 0; i < obj.users.length; i++){
                 channels[obj.channel].users.push(obj.users[i].identity);
             }
-            
+
             // Open this channel.
             openChannel(obj.channel);
             break;
         case 'IDN':
             // Used to inform the client their identification is successful and handily sends their character name along with it.
-            logInComplete(obj.character);            
+            logInComplete(obj.character);
             break;
         case 'IGN':
             // Handles the ignore list
@@ -1331,11 +1406,11 @@ function parseServerMessage(message){
                     pushFeedItem('info', 'Received an IGN with action: notify');
                     break;
             }
-            
+
             break;
         case 'JCH':
             // Indicates the given user has joined the given channel. This my also be the client's character.
-            // Don't use to know when we've joined a room. Use ICH.            
+            // Don't use to know when we've joined a room. Use ICH.
             break;
         case 'KID':
             // Kinks data in response to a KIN command.
@@ -1355,16 +1430,16 @@ function parseServerMessage(message){
                     statusmsg: obj.characters[i][3]
                 };
                 App.state.listedCount++;
-            }    
-            
+            }
+
             pushFeedItem('info', 'Received character payload of ' + obj.characters.length + ' character' + (obj.characters.length > 1 ? 's' : '') + '.');
-            
+
             // If the amount of characters now matches or is greater than con, we've received the full user list.
             if(App.state.listedCount >= App.state.loggedInCount){
                 // All received.
                 // Remove login loading content
                 $('.maincontainer').remove();
-                    
+
                 // Switch to the chat.
                 $('body').append(createDomMainChat());
             }
@@ -1380,31 +1455,31 @@ function parseServerMessage(message){
             // A user connected.
             if(App.characters[obj.identity] === null || typeof App.characters[obj.identity] === 'undefined'){
                 App.characters[obj.identity] = {};
-            }            
+            }
             App.characters[obj.identity].gender = obj.gender;
             App.characters[obj.identity].status = obj.status;
-            
-            // TODO Show a feed item if this user is our friend.            
+
+            // TODO Show a feed item if this user is our friend.
             break;
         case 'ORS':
             // A list of open private rooms.
-            
+
              // Update our list of channels.
             for(var i = 0; i < obj.channels.length; i++){
                 if(typeof App.privateChannels[obj.channels[i].name] === 'undefined'){
                     App.privateChannels[obj.channels[i].name] = {};
                 }
-                
+
                 App.privateChannels[obj.channels[i].name].name = obj.channels[i].name;
                 App.privateChannels[obj.channels[i].name].title = obj.channels[i].title;
                 App.privateChannels[obj.channels[i].name].mode = obj.channels[i].mode;
                 App.privateChannels[obj.channels[i].name].characterCount = obj.channels[i].characters;
-            } 
-            
+            }
+
             // Update dom.
             channelListUpdated();
-            
-            break;            
+
+            break;
         case 'PIN':
             // Respond to pings
             sendMessageToServer('PIN');
@@ -1432,7 +1507,7 @@ function parseServerMessage(message){
             // A user changed their status.
             App.characters[obj.character].status = obj.status;
             App.characters[obj.character].statusmsg = obj.statusmsg;
-            
+
             // If us
             if(obj.character === App.user.loggedInAs){
                 pushFeedItem('info', 'Your status has been updated successfully.');
@@ -1472,28 +1547,28 @@ function parseServerMessage(message){
 function servErrorIdentification(){
     // Set the text in the first line
     $('#loadingtext').text('Identification failed. Your session may have timed out.');
-                    
+
     // Turn the second line into a link by adding errorlink class.
     var secondLine = $('#loadingtext2');
     secondLine.text('Try logging in again.');
     secondLine.addClass('errorlink');
-    
+
     // Add click listener
     secondLine.click(function(){
         // Remove the loading content
         $('.maincontainer').remove();
-        
+
         // Re-add the login form
         $('body').append(createDomLogin());
     });
-    
-    // Stop the spinning peace hand and replcae with static stop hand.    
+
+    // Stop the spinning peace hand and replcae with static stop hand.
     $('.loginloadingcontent span').removeClass('fa-spin fa-hand-peace-o');
     $('.loginloadingcontent span').addClass('fa-hand-stop-o');
 }
 
 
-/** 
+/**
  * Main Entry Point ===================================================================================================================
  */
 
