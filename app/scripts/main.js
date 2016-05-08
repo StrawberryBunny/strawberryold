@@ -64,6 +64,9 @@ var App = {
             filterPMs: null,
             filterMentions: null,
             filterAlerts: null
+        },
+        viewer: {
+            target: ''
         }
     },
     consts: {
@@ -695,6 +698,160 @@ function createNextFeedMessageTimeoutCallback(iterate){
     };
 }
 
+/* Viewer */
+function openViewer(target){
+    // Set our target
+    App.tools['viewer'].target = target;
+    
+    // Turn on/off the buttons.
+    
+    // PM
+    if(target !== App.user.loggedInAs && isCharacterOnline(target)){
+        App.tools['viewer'].buttonPM.show();
+    }
+    else {
+         App.tools['viewer'].buttonPM.hide();       
+    }
+    
+    // Bookmarks
+    if(target !== App.user.loggedInAs){
+        App.tools['viewer'].buttonBookmark.show();
+        App.tools['viewer'].buttonBookmark.removeClass();
+        
+        var isBookmarked = isCharacterBookmarked(target);
+        App.tools['viewer'].buttonBookmark.addClass('faicon fa ' + (isBookmarked ? 'fa-bookmark' : 'fa-bookmark-o'));
+        App.tools['viewer'].buttonBookmark.attr('title', isBookmarked ? 'Remove Bookmark' : 'Add Bookmark');
+    }
+    else {
+        App.tools['viewer'].buttonBookmark.hide();
+    }
+    
+    // Friends
+    if(target !== App.user.loggedInAs){
+        App.tools['viewer'].buttonFriend.show();
+        App.tools['viewer'].buttonFriend.removeClass();
+        
+        var isFriend = isCharacterOurFriend(target, false);
+        App.tools['viewer'].buttonFriend.addClass('faicon fa ' + (isFriend ? 'fa-user-times' : 'fa-user-plus'));
+        App.tools['viewer'].buttonFriend.attr('title', isFriend ? 'Un-friend' : 'Send Friend Request');
+    }    
+    else {
+        App.tools['viewer'].buttonFriend.hide();
+    }
+    
+    // Memo & Note
+    if(target !== App.user.loggedInAs){
+        App.tools['viewer'].buttonMemo.show();
+        App.tools['viewer'].buttonNote.show();
+    }
+    else {
+        App.tools['viewer'].buttonMemo.hide();
+        App.tools['viewer'].buttonNote.hide();
+    }
+    
+    // Actual profile content.
+    postForCharacter(target);
+}
+
+function viewerUpdateCharacterBasic(data){
+    // Get character name
+    var characterName = data.character.name;
+    
+    // Fetch container.
+    var container = $('.toolviewerarea');
+    
+    // Clear any current data.
+    container.empty();
+    
+    // Create avatar thumb.
+    var domAvatar = $('<div class="toolviewerthumb"><img class="img-rounded" src="https://static.f-list.net/images/avatar/' + escapeHtml(characterName).toLowerCase() + '.png" title="' + characterName + '"/></div>');
+    container.append(domAvatar);
+    
+    // Name
+    container.append('<h1><b>' + characterName + '</b></h1>');
+    
+    // Description
+    container.append('<p><b>Description</b></p>');
+    var bb = XBBCODE.process({
+        text: data.character.description
+    });
+    container.append('<p>' + bb.html + '</p>');    
+}
+
+function viewerUpdateCharacterInfo(data){
+    // Fetch container
+    var container = $('.toolviewerarea');
+    
+    // Contact details/sites.
+    var contactDetails = data.info[1].items;
+    if(contactDetails.length > 0){
+        container.append('<p><b>Contact Details / Sites</b></p>');
+        var list = '<ul>';
+        for(var i = 0; i < contactDetails[i].length; i++){
+            list += '<li><b>' + contactDetails[i].name + '</b>: ' + contactDetails[i].value + '</li>';
+        }
+        list += '</ul>';
+        container.append(list);
+    }
+    
+    // Sexual Details
+    var sexualDetails = data.info[2].items;
+    if(sexualDetails.length > 0){
+        container.append('<p><b>Sexual Details</b></p>');
+        var list = '<ul>';
+        for(var i = 0; i < sexualDetails.length; i++){
+            list += '<li><b>' + sexualDetails[i].name + '</b>: ' + sexualDetails[i].value + '</li>';
+        }
+        list += '</ul>';
+        container.append(list);
+    }
+    
+    // General Details
+    var generalDetails = data.info[3].items;
+    if(generalDetails.length > 0){
+        container.append('<p><b>General Details</b></p>');
+        var list = '<ul>';
+        for(var i = 0; i < generalDetails.length; i++){
+            list += '<li><b>' + generalDetails[i].name + '</b>: ' + generalDetails[i].value + '</li>';
+        }
+        list += '</ul>';
+        container.append(list);
+    }
+    
+    // RPing Preferences.
+    var rpingPrefs = data.info[5].items;
+    if(rpingPrefs.length > 0){
+        container.append('<p><b>RPing Preferences</b></p>');
+        var list = '<ul>';
+        for(var i = 0; i < rpingPrefs.length; i++){
+            list += '<li><b>' + rpingPrefs[i].name + '</b>: ' + rpingPrefs[i].value + '</li>';
+        }
+        list += '</ul>';
+        container.append(list);
+    }
+}
+
+function viewerUpdatePictures(data){
+    console.log(JSON.stringify(data));
+    
+    // fetch container
+    var container = $('.toolviewerarea');
+    
+    // Loop images
+    for(var i = 0; i < data.images.length; i++){
+        
+        var domImage = $('<div class="viewerimage"></div>');
+        
+        domImage.append('<a href="' + data.images[i].url + '" target="_blank"><img class="img-responsive" src="' + data.images[i].url + '" title="' + data.images[i].description + '"/></a>')
+        
+        if(data.images[i].description.length > 0){
+            domImage.append('<span class="viewerimagedescription">' + data.images[i].description + '</span></div>');
+        }
+        
+        container.append(domImage);
+    }
+}
+
 /**
  * Tool Show Functions ==========================================================================================================
  */
@@ -711,7 +868,9 @@ function toolShowChannelList(){
 }
 
 function toolShowViewer(){
-
+    // Refresh our view of whoever the target is.
+    //openViewer(App.tools['viewer'].target);
+    openViewer('Curious Shota Adam');
 }
 
 function toolShowFriends(){
@@ -789,6 +948,31 @@ function layout(){
         $('.main').width(((containerWidth - 64) / containerWidth * 100) + '%');
         $('.toolpanel').width('0%');
     }
+}
+
+/** 
+ * Helper Functions ==========================================================================================================
+ */
+
+function isCharacterOnline(character){
+    return typeof App.characters[character] !== 'undefined' && App.characters[character].status.toLowerCase() !== 'offline';
+}
+
+function isCharacterBookmarked(character){
+    return App.user.bookmarks.indexOf(character) !== -1;
+}
+
+function isCharacterOurFriend(character, allCharacters){
+    if(allCharacters){
+        for(var key in App.user.friendsList){
+            if(App.user.friendsList[key].indexOf(character) !== -1) return true;
+        }        
+    }
+    else if(App.user.friendsList[App.user.loggedInAs].indexOf(character) !== -1){
+         return true
+    }   
+    
+    return false;
 }
 
 /**
@@ -891,6 +1075,78 @@ function postForTicket(account, password){
             }
         }
     );
+}
+
+function postForFriendsList(){
+    $.post('https://www.f-list.net/json/api/friend-list.php', 
+		'ticket=' + App.user.ticket + '&account=' + App.user.account,
+		function(data){			
+			var friends = data.friends;
+			App.user.friendsList = {};
+			for(var i = 0; i < friends.length; i++){
+				var source = friends[i].source;
+				var dest = friends[i].dest;
+				if(typeof App.user.friendsList[source] == 'undefined'){
+					App.user.friendsList[source] = [];
+				}
+				App.user.friendsList[source].push(dest);
+			}
+                        
+            App.state.logInReadyInfo.friendsListRetrieved = true;
+            
+            $('#loadingtext').text('Friends list received.');
+            $('#loadingtext2').text('Requesting bookmarks list...');
+            
+            // Continuie on with log in process.
+            postForBookmarks();        
+		}
+	);
+}
+
+function postForBookmarks(){
+	$.post('https://www.f-list.net/json/api/bookmark-list.php', 
+		'ticket=' + App.user.ticket + '&account=' + App.user.account,
+		function(data){
+            App.user.bookmarks = data.characters;
+            App.state.logInReadyInfo.bookmarksRetrieved = true;
+            
+            $('#loadingtext').text('Bookmarks received.');
+            $('#loadingtext2').text('Waiting for full user list to download... ' + App.state.logInReadyInfo.listedCharacters + " / " + App.state.logInReadyInfo.initialCharacterCount);
+            
+            // Log in process complete (except for full user list)
+            checkForReadyStatus();                       
+		}
+	);
+}
+
+function postForCharacter(character){
+	$.post('https://www.f-list.net/json/api/character-get.php',
+		'name=' + escapeHtml(character).toLowerCase(),
+		function(data){
+			viewerUpdateCharacterBasic(data);
+            postForCharacterInfo(character);
+		}
+	);
+}
+
+function postForCharacterInfo(character){
+	$.post('https://www.f-list.net/json/api/character-info.php',
+		'name=' + escapeHtml(character) + '&ticket=' + App.user.ticket + '&account=' + App.user.account,
+		function(data){
+            viewerUpdateCharacterInfo(data);
+            postForPictures(character);
+		}
+	);
+}
+
+function postForPictures(character){
+	$.post('https://www.f-list.net/json/api/character-images.php',
+		'name=' + escapeHtml(character) + '&ticket=' + App.user.ticket + '&account=' + App.user.account,
+		function(data){
+            data['character'] = character;
+			viewerUpdatePictures(data);
+		}
+	);
 }
 
 /**
@@ -1375,21 +1631,27 @@ function createDomToolViewer(){
     // buttons
     var btnOpenProfile = $('<span class="faicon fa fa-external-link" title="Open Profile"></span>');
     domTitleBar.append(btnOpenProfile);
+    App.tools['viewer'].buttonProfile = btnOpenProfile;
     
     var btnSendNote = $('<span class="faicon fa fa-envelope" title="Send Note"></span>');
     domTitleBar.append(btnSendNote);
+    App.tools['viewer'].buttonNote = btnSendNote;
     
     var btnMemo = $('<span class="faicon fa fa-sticky-note" title="View/Edit Memo"></span>')
     domTitleBar.append(btnMemo);
+    App.tools['viewer'].buttonMemo = btnMemo;
     
     var btnFriend = $('<span class="faicon fa fa-user-plus" title="Send Friend Request"></span>');
     domTitleBar.append(btnFriend);
+    App.tools['viewer'].buttonFriend = btnFriend;
     
     var btnBookmark = $('<span class="faicon fa fa-bookmark-o" title="Bookmark"></span>');
     domTitleBar.append(btnBookmark);   
+    App.tools['viewer'].buttonBookmark = btnBookmark;
     
     var btnOpenPM = $('<span class="faicon fa fa-comments" title="Open PM"></span>');
     domTitleBar.append(btnOpenPM);
+    App.tools['viewer'].buttonPM = btnOpenPM;
     
     // Scroller
     var domScroller = $('<div class="toolviewerscroller"></div>');
@@ -1622,7 +1884,7 @@ function parseServerMessage(message){
         var obj = JSON.parse(message.substr(3));
     }
 
-    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'ORS', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'NLN', 'JCH', 'LCH', 'ERR', 'FLN'];
+    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'ORS', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'NLN', 'JCH', 'LCH', 'ERR', 'FLN', 'LIS'];
     if(dontLog.indexOf(tag) === -1){
         console.log(message);
     }
@@ -1763,6 +2025,9 @@ function parseServerMessage(message){
             
             // Set logged in user
             App.user.loggedInAs = obj.character;
+            
+            // The the viewer target to our character
+            App.tools['viewer'].target = obj.character;
 
             // Set the loading texts
             $('#loadingtext').text('Identification successful.');
@@ -1959,52 +2224,6 @@ function servErrorIdentification(){
     // Stop the spinning peace hand and replcae with static stop hand.
     $('.loginloadingcontent span').removeClass('fa-spin fa-hand-peace-o');
     $('.loginloadingcontent span').addClass('fa-hand-stop-o');
-}
-
-/** 
- * Post Helpers ======================================================================================================================
- */
-
-function postForFriendsList(){
-    $.post('https://www.f-list.net/json/api/friend-list.php', 
-		'ticket=' + App.user.ticket + '&account=' + App.user.account,
-		function(data){			
-			var friends = data.friends;
-			App.user.friendsList = {};
-			for(var i = 0; i < friends.length; i++){
-				var source = friends[i].source;
-				var dest = friends[i].dest;
-				if(typeof App.user.friendsList[source] == 'undefined'){
-					App.user.friendsList[source] = [];
-				}
-				App.user.friendsList[source].push(dest);
-			}
-                        
-            App.state.logInReadyInfo.friendsListRetrieved = true;
-            
-            $('#loadingtext').text('Friends list received.');
-            $('#loadingtext2').text('Requesting bookmarks list...');
-            
-            // Continuie on with log in process.
-            postForBookmarks();        
-		}
-	);
-}
-
-function postForBookmarks(){
-	$.post('https://www.f-list.net/json/api/bookmark-list.php', 
-		'ticket=' + App.user.ticket + '&account=' + App.user.account,
-		function(data){
-            App.user.bookmarks = data.characters;
-            App.state.logInReadyInfo.bookmarksRetrieved = true;
-            
-            $('#loadingtext').text('Bookmarks received.');
-            $('#loadingtext2').text('Waiting for full user list to download... ' + App.state.logInReadyInfo.listedCharacters + " / " + App.state.logInReadyInfo.initialCharacterCount);
-            
-            // Log in process complete (except for full user list)
-            checkForReadyStatus();                       
-		}
-	);
 }
 
 /**

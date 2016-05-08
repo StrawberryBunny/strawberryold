@@ -487,6 +487,32 @@ html, body {
     margin-bottom: 10px;
 }
 
+/* Tool - Viewer */
+.toolviewerscroller {
+    overflow-y: auto;
+    height: calc(100% - 48px);
+}
+
+.toolviewerarea {
+    padding: 10px;
+}
+
+.toolviewerthumb {
+    float: right;
+}
+
+.viewerimage {
+    background-color: #333333;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+.viewerimagedescription {
+    display: block;
+    padding-top: 10px;
+}
+
+
 /* Global */
 
 .userentry {
