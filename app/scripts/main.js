@@ -699,7 +699,7 @@ function createNextFeedMessageTimeoutCallback(iterate){
 }
 
 /* Viewer */
-function openViewer(target){
+function targetViewerFor(target){
     // Set our target
     App.tools['viewer'].target = target;
     
@@ -749,6 +749,13 @@ function openViewer(target){
         App.tools['viewer'].buttonNote.hide();
     }
     
+    // Disable all buttons
+    App.tools['viewer'].buttonPM.addClass('disabled');
+    App.tools['viewer'].buttonBookmark.addClass('disabled');
+    App.tools['viewer'].buttonFriend.addClass('disabled');
+    App.tools['viewer'].buttonMemo.addClass('disabled');
+    App.tools['viewer'].buttonNote.addClass('disabled');
+    
     // Actual profile content.
     postForCharacter(target);
 }
@@ -779,7 +786,7 @@ function viewerUpdateCharacterBasic(data){
 }
 
 function viewerUpdateCharacterInfo(data){
-    // Fetch container
+   // Fetch container
     var container = $('.toolviewerarea');
     
     // Contact details/sites.
@@ -832,14 +839,11 @@ function viewerUpdateCharacterInfo(data){
 }
 
 function viewerUpdatePictures(data){
-    console.log(JSON.stringify(data));
-    
     // fetch container
     var container = $('.toolviewerarea');
     
     // Loop images
     for(var i = 0; i < data.images.length; i++){
-        
         var domImage = $('<div class="viewerimage"></div>');
         
         domImage.append('<a href="' + data.images[i].url + '" target="_blank"><img class="img-responsive" src="' + data.images[i].url + '" title="' + data.images[i].description + '"/></a>')
@@ -850,10 +854,18 @@ function viewerUpdatePictures(data){
         
         container.append(domImage);
     }
+    
+    // Re-enable buttons.
+    App.tools['viewer'].buttonPM.removeClass('disabled');
+    App.tools['viewer'].buttonBookmark.removeClass('disabled');
+    App.tools['viewer'].buttonFriend.removeClass('disabled');
+    App.tools['viewer'].buttonMemo.removeClass('disabled');
+    App.tools['viewer'].buttonNote.removeClass('disabled')
 }
 
 /**
  * Tool Show Functions ==========================================================================================================
+ * Fired from toggleTool(*) but only if the user clicked on a button to initiate it.
  */
 function toolShowStatus(){
     // Update the form to match our currently maintained status.
@@ -868,9 +880,8 @@ function toolShowChannelList(){
 }
 
 function toolShowViewer(){
-    // Refresh our view of whoever the target is.
-    //openViewer(App.tools['viewer'].target);
-    openViewer('Curious Shota Adam');
+    // refresh (set the target to the target it already has.)
+    targetViewerFor(App.tools['viewer'].target);
 }
 
 function toolShowFriends(){
@@ -902,7 +913,7 @@ function toolShowLogout(){
  * Layout & Navigation  =========================================================================================================
  */
 
-function toggleTool(toolName){
+function toggleTool(toolName, manual){
     if(App.state.currentTool === toolName){
         toolName = '';
     }
@@ -929,7 +940,7 @@ function toggleTool(toolName){
     App.state.currentTool = toolName;
 
     // Let this tool perform anything it needs to do when it's shown.
-    if(toolName !== ''){
+    if(toolName !== '' && manual){
         window[App.consts.tools[toolName].show]();
     }
 
@@ -1147,6 +1158,55 @@ function postForPictures(character){
 			viewerUpdatePictures(data);
 		}
 	);
+}
+
+function postForGetMemo(character){
+    $.post('https://www.f-list.net/json/api/character-memo-get.json', 
+        'target=' + escapeHtml(character) + '&ticket=' + App.user.ticket + '&account=' + App.user.account,
+        function(data){
+            // Create the note dom
+            var domNote = createDomMemo(App.tools['viewer'].target, data.note, data.id);
+            $('.toolviewerarea').append(domNote);
+            
+            // Stop the button spinning
+            App.tools['viewer'].buttonMemo.removeClass('fa-spin');
+            
+            // Scroll down to the note.
+            $('.toolviewerscroller').animate({
+                scrollTop: domNote.offset().top
+            }, 2000);
+        }
+    );
+}
+
+function postForSetMemo(characterID, note){
+    $.post('https://www.f-list.net/json/api/character-memo-save.json', 
+        //'target=' + escapeHtml(character) + '&ticket=' + App.user.ticket + '&account=' + App.user.account + '&note=' + note,
+        'target=' + characterID + '&ticket=' + App.user.ticket + '&account=' + App.user.account + '&note=' + escapeHtml(note),
+        function(data){
+            // Re-enable the button
+            $('#memosend').prop('disabled', false);
+            
+            // Error check
+            if(data.error.length > 0){
+                // Oh dear.
+                var prog = $('#memoprogress');
+                prog.removeClass();
+                prog.addClass('fa fa-times');
+                prog.show();  
+                
+                // Feed
+                pushFeedItem('error', 'There was a problem saving the memo: ' + data.error);
+            }
+            else {
+                // Change the progress to show the result.
+                var prog = $('#memoprogress');
+                prog.removeClass();
+                prog.addClass('fa fa-check');
+                prog.show();  
+            }
+        }
+    );
 }
 
 /**
@@ -1398,7 +1458,7 @@ function createDomsTool(domMainMenu, domToolPanel, name){
 
 function createToolClickListener(name){
     return function(){
-        toggleTool(name);
+        toggleTool(name, true);
     };
 }
 
@@ -1632,14 +1692,39 @@ function createDomToolViewer(){
     var btnOpenProfile = $('<span class="faicon fa fa-external-link" title="Open Profile"></span>');
     domTitleBar.append(btnOpenProfile);
     App.tools['viewer'].buttonProfile = btnOpenProfile;
+    btnOpenProfile.click(function(){
+        window.open('https://www.f-list.net/c/' + escapeHtml(App.tools['viewer'].target), '_blank');
+    });
     
     var btnSendNote = $('<span class="faicon fa fa-envelope" title="Send Note"></span>');
     domTitleBar.append(btnSendNote);
     App.tools['viewer'].buttonNote = btnSendNote;
+    btnSendNote.click(function(){
+        // No way to send notes via jsonendpoints or client commands so just open the PM url.
+        window.open('https://www.f-list.net/read_notes.php?send=' + escapeHtml(App.tools['viewer'].target), '_blank');        
+    });
     
     var btnMemo = $('<span class="faicon fa fa-sticky-note" title="View/Edit Memo"></span>')
     domTitleBar.append(btnMemo);
     App.tools['viewer'].buttonMemo = btnMemo;
+    btnMemo.click(function(){
+        // If this button isn't disbaled.
+        if(!$(this).hasClass('disabled')){
+            // If the memo container doesn't already exist
+            if($('.toolviewerarea').find('.memocontainer').length == 0){
+                // Post for the memo
+                postForGetMemo(App.tools['viewer'].target);
+                
+                // Spin the note icon
+                $(this).addClass('fa-spin');
+            }
+            else {
+                $('.toolviewerscroller').animate({
+                    scrollTop: $('.toolviewerarea').find('.memocontainer').offset().top
+                }, 2000);
+            }
+        }
+    });
     
     var btnFriend = $('<span class="faicon fa fa-user-plus" title="Send Friend Request"></span>');
     domTitleBar.append(btnFriend);
@@ -1662,6 +1747,57 @@ function createDomToolViewer(){
     var domContent = $('<div class="toolviewerarea"></div>');
     domScroller.append(domContent);
     App.tools['viewer'].scrollerContent = domContent; 
+}
+
+function createDomMemo(recipient, note, recipientID){
+    var domContainer = $('<div class="memocontainer"></div>');
+    
+    domContainer.append('<p>Your memo for ' + recipient + '.</p>');
+       
+    var domForm = domContainer.append('<div class="noteform"><textarea id="memotextarea">' + note + '</textarea></div>');
+    domContainer.append(domForm);
+    
+    var domBtnCancel = $('<button id="memocancel" class="btn btn-default">Hide</button>');
+    var domInProgressConfirm = $('<span id="memoprogress" class="fa fa-spinner fa-spin"></span>');
+    var domBtnSubmit = $('<button id="memosend" class="btn btn-default">Update</button>');
+    
+    var domButtonContainer = $('<div class="memobuttons"></div>');
+    domButtonContainer.append(domBtnCancel);
+    
+    var domButtonCollection = $('<div></div>');
+    domButtonCollection.append(domInProgressConfirm);
+    domButtonCollection.append(domBtnSubmit);
+    
+    domInProgressConfirm.hide();
+    
+    domButtonContainer.append(domButtonCollection);
+    
+    domContainer.append(domButtonContainer);
+    
+    domBtnCancel.click(function(){
+        $(this).parent().parent().slideUp(1000, function(){
+            $(this).remove();
+        });
+    });
+    
+    domBtnSubmit.click(createMemoSubmitClickCallback(recipientID));
+        
+    return domContainer;
+}
+
+function createMemoSubmitClickCallback(recipientID){
+    return function(){
+        // Disable the submit button.
+        $(this).prop('disabled', true);
+        
+        // Show the progress spinner
+        var prog = $('#memoprogress');
+        prog.removeClass();
+        prog.addClass('fa fa-spinner fa-spin');
+        prog.show();        
+        
+        postForSetMemo(recipientID, $('#memotextarea').val());
+    };
 }
 
 function createDomToolFriendsList(){
@@ -1706,8 +1842,8 @@ function createDomFriendsListContents(){
             var dom = createDomFriendsListEntry(App.user.loggedInAs, App.user.friendsList[App.user.loggedInAs][i]);
             App.tools['friends'].scrollerContent.append(dom);
             dom.click(function(){
-                // TODO Open viewer for this character
-                console.log("Open Viewer: " + $(this).attr('title'));
+                targetViewerFor($(this).attr('title'));
+                toggleTool('viewer');               
             });
         }
     }

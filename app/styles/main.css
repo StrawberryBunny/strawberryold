@@ -512,6 +512,40 @@ html, body {
     padding-top: 10px;
 }
 
+.memocontainer {
+    margin-top: 10px;
+    background-color: #333333;
+    padding: 10px;
+}
+
+.memocontainer .noteform {
+    background-color: #222222;
+}
+
+#memotextarea {
+    width: 100%;
+    height: 200px;
+    resize: none;
+    color: #222222;
+}
+
+.memobuttons {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    color: #222222;
+}
+
+.memobuttons div {
+    display: flex;
+    align-items: center;
+}
+
+.memobuttons span {
+    color: #aaaaaa;
+    margin-right: 10px;
+    font-size: 24px;
+}
 
 /* Global */
 
@@ -582,6 +616,15 @@ html, body {
 
 .faicon:hover {
     color: #ea4933;
+}
+
+.disabled {
+    cursor: default;
+    color: #555555;
+}
+
+.disabled:hover {
+    color: #555555;
 }
 
 .famuted {
