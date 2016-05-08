@@ -278,43 +278,6 @@ function characterWentOffline(character){
     }
 }
 
-function characterJoinedChannel(character, channel){
-    var isPublic = channel.substr(0, 3) !== 'ADH';
-    var channels = isPublic ? App.publicChannels : App.privateChannels;
-    
-    // Add to list..
-    channels[channel].users.push(character);
-    channels[channel].users.sort();
-    
-    // (Re)create userlist dom.
-    channels[channel].userlistDom.empty();
-    for(var i = 0; i < channels[channel].users.length; i++){
-        var charName = channels[channel].users[i];
-        var dom = createDomUserEntry(charName, App.characters[charName].gender, App.characters[charName].status, App.characters[charName].statusmsg);
-        channels[channel].userlistDom.append(dom);
-    }
-}
-
-function characterLeftChannel(character, channel){
-    var isPublic = channel.substr(0, 3) !== 'ADH';
-    var channels = isPublic ? App.publicChannels : App.privateChannels;
-    
-    // Remove from list
-    var removed = channels[channel].users.splice(character, 1);
-    if(typeof removed === 'undefined'){
-        // Tried to remove a character from a room but they weren't in there? Wtf.
-        pushFeedItem('error', 'Server informed us that ' + character + ' left ' + channel + ' but we did not have them listed.');
-        return;
-    }
-    
-    // Remove from list dom.
-    channels[channel].userlistDom.children('.userentry').each(function(){
-        if($(this).attr('title') === character){
-            $(this).remove();
-        }
-    });
-}
-
 /**
  * Channels ========================================================================================================================
  */
@@ -433,6 +396,13 @@ function openChannel(name){
         var dom = createDomUserEntry(charName, App.characters[charName].gender, App.characters[charName].status, App.characters[charName].statusmsg);
         channels[name].userlistDom.append(dom);
     }
+    
+    // Set this channel's entry in the room list to on.
+    channels[name].listEntry.addClass('selected');
+    
+    // Update this channel's entry in the room list's char count
+    var count = parseInt(channels[name].listEntry.find('#charcount').text());
+    channels[name].listEntry.find('#charcount').text(count + 1);
 
     // If no channel is selected, select this one
     if(App.state.selectedChannel == ''){
@@ -484,6 +454,13 @@ function closeChannel(name){
         // Select the channel
         selectChannel(newChannelName);
     }
+    
+    // Unselect this channel's entry in the channel list
+    channels[name].listEntry.removeClass('selected');    
+    
+    // Update this channel's entry in the room list's char count
+    var count = parseInt(channels[name].listEntry.find('#charcount').text());
+    channels[name].listEntry.find('#charcount').text(count - 1);
 }
 
 function receiveMessage(channel, character, message){
@@ -497,6 +474,51 @@ function receiveMessage(channel, character, message){
     // Create dom
     var dom = createDomMessage(character, message);
     channels[channel].messageDom.append(dom);
+}
+
+function characterJoinedChannel(character, channel){
+    var isPublic = channel.substr(0, 3) !== 'ADH';
+    var channels = isPublic ? App.publicChannels : App.privateChannels;
+    
+    // Add to list..
+    channels[channel].users.push(character);
+    channels[channel].users.sort();
+    
+    // (Re)create userlist dom.
+    channels[channel].userlistDom.empty();
+    for(var i = 0; i < channels[channel].users.length; i++){
+        var charName = channels[channel].users[i];
+        var dom = createDomUserEntry(charName, App.characters[charName].gender, App.characters[charName].status, App.characters[charName].statusmsg);
+        channels[channel].userlistDom.append(dom);
+    }
+    
+    // Update this channel's entry in the channel list.
+    var count = parseInt(channels[channel].listEntry.find('#charcount').text());
+    channels[channel].listEntry.find('#charcount').text(count + 1);
+}
+
+function characterLeftChannel(character, channel){
+    var isPublic = channel.substr(0, 3) !== 'ADH';
+    var channels = isPublic ? App.publicChannels : App.privateChannels;
+    
+    // Remove from list
+    var removed = channels[channel].users.splice(character, 1);
+    if(typeof removed === 'undefined'){
+        // Tried to remove a character from a room but they weren't in there? Wtf.
+        pushFeedItem('error', 'Server informed us that ' + character + ' left ' + channel + ' but we did not have them listed.');
+        return;
+    }
+    
+    // Remove from list dom.
+    channels[channel].userlistDom.children('.userentry').each(function(){
+        if($(this).attr('title') === character){
+            $(this).remove();
+        }
+    });
+    
+    // Update this channel's entry in the channel list.
+    var count = parseInt(channels[channel].listEntry.find('#charcount').text());
+    channels[channel].listEntry.find('#charcount').text(count - 1);
 }
 
 /**
@@ -518,7 +540,7 @@ function refreshChannels(){
     sendMessageToServer('CHA');
 }
 
-function channelListUpdated(){ // Called from parseServerMessage() when the channel list has been updated
+function channelListUpdated(){ // Called from parseServerMessage() when the public & private channel lists has been updated
     // Stop the refresh button spinning
     App.tools['channels'].refreshbutton.removeClass("fa-spin");
 
@@ -541,6 +563,12 @@ function channelListUpdated(){ // Called from parseServerMessage() when the chan
     for(var i = 0; i < publicList.length; i++){
         var dom = createDomChannelListEntry(App.publicChannels[publicList[i]].name, App.publicChannels[publicList[i]].name, App.publicChannels[publicList[i]].characterCount);
         App.tools['channels'].entryPush.append(dom);
+        App.publicChannels[publicList[i]].listEntry = dom;
+        
+        // is this room open?
+        if(App.state.openChannels.indexOf(publicList[i]) !== -1){
+            dom.addClass('selected');
+        }
     }
 
     // Add a title seperator for "Private Channels"
@@ -564,6 +592,12 @@ function channelListUpdated(){ // Called from parseServerMessage() when the chan
     for(var i = 0; i < privateList.length; i++){
         var dom = createDomChannelListEntry(privateList[i][1], privateList[i][0], App.privateChannels[privateList[i][1]].characterCount);
         App.tools['channels'].entryPush.append(dom);
+        App.privateChannels[privateList[i][1]].listEntry = dom;
+        
+        // Is this room open?
+        if(App.state.openChannels.indexOf(privateList[i][1]) !== -1){
+            dom.addClass('selected');
+        }
     }
 }
 
@@ -1216,10 +1250,10 @@ function createDomToolChannelList(){
 function createDomChannelListEntry(channelName, channelTitle, characterCount){
     var domContainer = $('<div class="channellistentry"></div>');
 
-    var domRoomName = $('<div>' + channelTitle + '</div>');
+    var domRoomName = $('<span>' + channelTitle + '</span>');
     domContainer.append(domRoomName);
 
-    var domCharCount = $('<div>' + characterCount + '</div>');
+    var domCharCount = $('<span id="charcount">' + characterCount + '</span>');
     domContainer.append(domCharCount);
 
     var domHidden = $('<span id="data" title="' + channelName + '" style="display: none;"></span>')
@@ -1228,7 +1262,14 @@ function createDomChannelListEntry(channelName, channelTitle, characterCount){
     domContainer.click(function(){
         // Get the hidden data.
         var channelName = $(this).find("#data").attr('title');
-        joinChannel(channelName);
+        
+        // Is this channel open already?
+        if(App.state.openChannels.indexOf(channelName) === -1){
+            joinChannel(channelName);
+        }
+        else {
+            leaveChannel(channelName);
+        }
     });
 
     return domContainer;
@@ -1971,6 +2012,11 @@ function postForBookmarks(){
  */
 
 $(document).ready(function(){
+    // Resize
+    $(window).resize(function(){
+        layout();
+    });
+    
     // Create the login dom
     $('body').append(createDomLogin());
     

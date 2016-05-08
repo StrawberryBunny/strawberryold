@@ -403,6 +403,10 @@ html, body {
     background-color: #ea4933;
 }
 
+.selected {
+    background-color: #ea4933;
+}
+
 .channellistseperator {
     padding: 10px;
     background-color: #111111;
