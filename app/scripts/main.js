@@ -32,7 +32,9 @@ var App = {
     state: { // Collection of items related to the dom
         currentTool: '',
         openChannels: [],
-        selectedChannel: '',
+        openPMs: [],
+        selectedChannel: '', // If this is 'pm' then refer to selectedPM
+        selectedPM: '',
         logInReadyInfo: {
             loadingDelay: true,
             ready: false,
@@ -185,13 +187,18 @@ function throwError(message){
 }
 
 function sendChatMessageToActiveWindow(message){
-    return sendChatMessage(message, App.state.selectedChannel);
+    if(App.state.selectedChannel !== 'pm'){
+        return sendChatMessage(message, App.state.selectedChannel);
+    }
+    else {
+        return sendPM(message, App.state.selectedPM);
+    }
 }
 
 function sendChatMessage(message, channel){
     // Check for bullcrap
     var strippedMessage = stripWhitespace(message);
-    if(message == '' || strippedMessage == '' || strippedMessage.length == 0 || channel == '' || channel.length == 0){
+    if(message === '' || strippedMessage === '' || strippedMessage.length === 0 || channel === '' || channel.length === 0){
         return false;
     }
 
@@ -211,12 +218,44 @@ function sendChatMessage(message, channel){
     }
 
     // Send message to server
-    sendMessageToServer('MSG { "channel": "' + channel + '", "message": "' + escapeJson(message) + '" }')
+    sendMessageToServer('MSG { "channel": "' + channel + '", "message": "' + escapeJson(message) + '" }');
 
     // Add the message to the chat window
     receiveMessage(channel, App.user.loggedInAs, message);
     
     // Return success
+    return true;
+}
+
+function sendPM(message, character){
+    // Check for bullcrap
+    var strippedMessage = stripWhitespace(message);
+    if(message === '' || strippedMessage === '' || strippedMessage.length === 0 || character === '' || character.length === 0){
+        return false;
+    }
+    
+    // Check for malformed BBCODe
+    var bb = XBBCODE.process({
+        text: message
+    });
+    
+    if(bb.error){
+        var errorMessage = '[ul]';
+        for(var i = 0; i < bb.errorQueue.length; i++){
+            errorMessage += '[li]' + bb.errorQueue[i] + '[/li]';        
+        }
+        errorMessage += '[/ul]'
+        pushFeedItem('error', errorMessage);
+        return false;
+    }
+    
+    // Send message to server
+    sendMessageToServer('PRI { "recipient": "' + character + '", "message": "' + escapeJson(message) + '" }');
+    
+    // Add the message to the chat window
+    receivePM(character, message, App.user.loggedInAs);
+    
+    // result
     return true;
 }
 
@@ -294,20 +333,7 @@ function selectChannel(name){
 
     // Turn off the currently selected channel?
     if(App.state.selectedChannel !== ''){
-        // Is the selected channel public or private?
-        var isPublic = App.state.selectedChannel.substr(0, 3) !== 'ADH';
-
-        // get the channel list it belongs to
-        var channels = isPublic ? App.publicChannels : App.privateChannels;
-
-        // Remove the message dom.
-        channels[App.state.selectedChannel].messageDom.remove();
-
-        // Remove the userlist
-        channels[App.state.selectedChannel].userlistDom.remove();
-
-        // Deselect the channel's button
-        channels[App.state.selectedChannel].buttonDom.removeClass('fabuttonselected');
+        turnOffSelectedChannel();
     }
     else {
         // Turn off the no-channel stuff
@@ -315,7 +341,7 @@ function selectChannel(name){
     }
 
     // Turn on the new channel.
-    if(name == ''){
+    if(name === ''){
         App.dom.noChannelImage.show();
         App.dom.userlistTitle.hide();
     }
@@ -354,7 +380,7 @@ function joinChannel(name){
 function openChannel(name){
     // Is this channel already open?
     if(App.state.openChannels.indexOf(name) !== -1){
-        throwError('Trying to open a channel that is already open.');
+        throwError('Trying to open a channel that is already open: ' + name); 
         return;
     }
 
@@ -420,7 +446,8 @@ function leaveChannel(name){
 function closeChannel(name){
     // If this channel isn't in the list of open channels.
     if(App.state.openChannels.indexOf(name) === -1){
-        console.log("Error: Trying to close a channel that isn't open.");
+        console.log("Error: Trying to close a channel that isn't open: " + name);
+        console.log(JSON.stringify(App.state.openChannels));
         pushFeedItem('error', 'Tried to close channel ' + name + ' when it isn\'t open.');
         return;
     }
@@ -430,8 +457,15 @@ function closeChannel(name){
     var channels = isPublic ? App.publicChannels : App.privateChannels;
 
     // Get the index of our button in the list of buttons.
-    var removeIndex = App.state.openChannels.indexOf(name);
-
+    var removeIndex = -1;
+    var matchingChannelButtons = $('#channel-' + stripWhitespace(name));
+    for(var i = 0; i < matchingChannelButtons.length; i++){
+        if(matchingChannelButtons.eq(i).attr('title') === name){
+            removeIndex = matchingChannelButtons.eq(i).index();
+            break;
+        }
+    } 
+      
     // Remove doms.
     channels[name].buttonDom.remove();
     channels[name].messageDom.remove();
@@ -440,8 +474,8 @@ function closeChannel(name){
     // remove form open channel list
     App.state.openChannels.splice(removeIndex, 1);
 
+    if($('.channellist').children().length === 0){
     // If there are no channels to move to show the no channel stuff.
-    if(App.state.openChannels.length == 0){
         App.dom.noChannelImage.show();
         App.dom.userlistTopBar.hide();
         App.state.selectedChannel = '';
@@ -452,10 +486,17 @@ function closeChannel(name){
         if(removeIndex < 0) removeIndex = 0;
 
         // get the button dom
-        var newChannelName = App.state.openChannels[removeIndex];
+        var buttonDom = $('.channellist').children().eq(removeIndex);
+        var newChannelName = buttonDom.attr('title'); 
+        var isPM = buttonDom.attr('id').split('-')[0] === 'pm';
 
         // Select the channel
-        selectChannel(newChannelName);
+        if(isPM){
+            selectPM(newChannelName);
+        }
+        else {
+            selectChannel(newChannelName);
+        }
     }
     
     // Unselect this channel's entry in the channel list
@@ -522,6 +563,191 @@ function characterLeftChannel(character, channel){
     // Update this channel's entry in the channel list.
     var count = parseInt(channels[channel].listEntry.find('#charcount').text());
     channels[channel].listEntry.find('#charcount').text(count - 1);
+}
+
+function turnOffSelectedChannel(){
+    // If this is a pm
+    if(App.state.selectedChannel === 'pm'){
+        turnOffSelectedPM();
+        return;
+    }
+    
+    // Is the selected channel public or private?
+    var isPublic = App.state.selectedChannel.substr(0, 3) !== 'ADH';
+
+    // get the channel list it belongs to
+    var channels = isPublic ? App.publicChannels : App.privateChannels;
+
+    // Remove the message dom.
+    channels[App.state.selectedChannel].messageDom.remove();
+
+    // Remove the userlist
+    channels[App.state.selectedChannel].userlistDom.remove();
+
+    // Deselect the channel's button
+    channels[App.state.selectedChannel].buttonDom.removeClass('fabuttonselected');
+}
+
+/**
+ * PMs =============================================================================================================================
+ */
+
+function selectPM(character){
+    // Is this PM already selected?
+    if(App.state.selectedChannel === 'pm' && App.state.selectedPM === character){
+        // Do nothing
+        return;
+    }
+    
+    // Turn off the currently selected channel?
+    if(App.state.selectedChannel !== ''){
+        turnOffSelectedChannel();
+    }
+    else {
+        // Turn off the no-channel stuff
+        App.dom.noChannelImage.hide();
+    }
+
+    // Turn on the new channel.
+    if(character === ''){
+        App.dom.noChannelImage.show();
+        App.dom.userlistTitle.hide();
+    }
+    else {
+        // Attach the message dom
+        App.dom.channelContents.append(App.characters[character].pms.messageDom);
+
+        // Attach the userlist
+        //App.dom.userlist.append(App.characters[character].pms.userlistDom);
+
+        // Select the channel's button
+        App.characters[character].pms.buttonDom.addClass('fabuttonselected');
+
+        // Change the current title.
+        App.dom.userlistTitle.text(character);
+
+        // Ensure the userlist title bar is showing
+        App.dom.userlistTopBar.css('display', 'flex');
+    }
+
+    // Set newly selected channel
+    App.state.selectedChannel = 'pm';
+    App.state.selectedPM = character;
+}
+
+function openPM(character){
+    // Is this channel already open?
+    if(App.state.openPMs.indexOf(character) !== -1){
+        throwError('Trying to open a PM that is already open.');
+        return;
+    }
+
+    // Push into the list of open pms;
+    App.state.openPMs.push(character);
+
+    // Do we need to create doms for this channel?
+    if(typeof App.characters[character].pms.messageDom === 'undefined'){
+        var domMessages = createDomPMContents();
+        App.characters[character].pms.messageDom = domMessages;
+    }
+
+    /*if(typeof channels[name].userlistDom === 'undefined'){
+        
+    }*/
+
+    if(typeof App.characters[character].pms.buttonDom === 'undefined'){
+        var domButton = createDomPMButton(character);
+        App.characters[character].pms.buttonDom = domButton;
+    }
+
+    // Append the dom button to the channel list.
+    App.dom.openChannelList.append(App.characters[character].pms.buttonDom);
+
+    // Add the click listener to the dom button
+    App.characters[character].pms.buttonDom.click(function(){
+        var characterName = $(this).find('#data').attr('title');
+        selectPM(character);
+    });
+        
+    // If no channel is selected, select this one
+    if(App.state.selectedChannel == ''){
+        selectPM(character);
+    }
+}
+
+function closePM(character){
+    // if this pm isn't open..
+    if(App.state.openPMs.indexOf(character) === -1){
+       console.log("Error: Trying to close a PM that isn't open.");
+        pushFeedItem('error', 'Tried to close PM for ' + character + ' when it isn\'t open.');
+        return;
+    }
+    
+    // Get the index of our button in the list of buttons.
+    var removeIndex = -1;
+    var matchingChannelButtons = $('#pm-' + stripWhitespace(name));
+    for(var i = 0; i < matchingChannelButtons.length; i++){
+        if(matchingChannelButtons.eq(i).attr('title') === name){
+            removeIndex = matchingChannelButtons.eq(i).index();
+            break;
+        }
+    } 
+
+    // Remove doms.
+    App.characters[character].pms.buttonDom.remove();
+    App.characters[character].pms.messageDom.remove();
+    //App.characters[character].pms.userlistDom.remove();
+
+    // remove form open channel list
+    App.state.openPMs.splice(removeIndex, 1);
+
+    // If there are no channels to move to show the no channel stuff.
+    if($('.channellist').children().length === 0){
+        App.dom.noChannelImage.show();
+        App.dom.userlistTopBar.hide();
+        App.state.selectedChannel = '';
+    }
+    else {
+        // what channel should we select next?
+        removeIndex -= 1;
+        if(removeIndex < 0) removeIndex = 0;
+
+        // get the button dom
+        var buttonDom = $('.channellist').children().eq(removeIndex);
+        var newChannelName = buttonDom.attr('title'); 
+        var isPM = buttonDom.attr('id').split('-')[0] === 'pm';
+
+        // Select the channel
+        if(isPM){
+            selectPM(newChannelName);
+        }
+        else {
+            selectChannel(newChannelName);
+        }
+    }
+}
+
+function turnOffSelectedPM(){
+    App.characters[App.state.selectedPM].pms.messageDom.remove();
+    App.characters[App.state.selectedPM].pms.buttonDom.removeClass('fabuttonselected');
+}
+
+function receivePM(character, message, sender){
+    // Is a pm for this character open?
+    if(App.state.openPMs.indexOf(character) === -1){
+        // Open a PM for this character.
+        openPM(character);
+    }
+    
+    // List
+    if(typeof App.characters[character].pms.messages === 'undefined'){
+        App.characters[character].pms.messages = [];
+    }
+    App.characters[character].pms.messages.push(message);
+    
+    // Create dom
+    var dom = createDomMessage(sender, message);
+    App.characters[character].pms.messageDom.append(dom);
 }
 
 /**
@@ -1421,7 +1647,12 @@ function createDomMain(){
 
 function createUserListCloseButtonClickCallback(){
     return function(){
-        leaveChannel(App.state.selectedChannel);
+        if(App.state.selectedChannel !== 'pm'){
+            leaveChannel(App.state.selectedChannel);
+        }
+        else {
+            closePM(App.state.selectedPM);
+        }
     }
 }
 
@@ -1737,6 +1968,9 @@ function createDomToolViewer(){
     var btnOpenPM = $('<span class="faicon fa fa-comments" title="Open PM"></span>');
     domTitleBar.append(btnOpenPM);
     App.tools['viewer'].buttonPM = btnOpenPM;
+    btnOpenPM.click(function(){
+        openPM(App.tools['viewer'].target);
+    });
     
     // Scroller
     var domScroller = $('<div class="toolviewerscroller"></div>');
@@ -1947,7 +2181,16 @@ function createDomChannelUserlist(){
 }
 
 function createDomChannelButton(isPublic, channelName, channelTitle){
-    return $('<div class="fabutton" title="' + channelTitle + '"><span id="data" title="' + channelName + '"></span><span class="fa ' + (isPublic ? 'fa-th' : 'fa-key') + '"></span></div>');
+    return $('<div id="channel-' + stripWhitespace(channelName) + '" class="fabutton" title="' + channelTitle + '"><span id="data" title="' + channelName + '"></span><span class="fa ' + (isPublic ? 'fa-th' : 'fa-key') + '"></span></div>');
+}
+
+/* PMs */
+function createDomPMContents(){
+    return $('<div class="pmmessages"></div>');
+}
+
+function createDomPMButton(character){
+    return $('<div id="pm-' + stripWhitespace(character) + '" ' + 'class="fabutton pm" title="' + character + '"><img id="data" src="https://static.f-list.net/images/avatar/' + escapeHtml(character).toLowerCase() + '.png" title="' + character + '"/></div>');
 }
 
 /* Others */
@@ -2050,7 +2293,7 @@ function parseServerMessage(message){
         var obj = JSON.parse(message.substr(3));
     }
 
-    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'ORS', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'NLN', 'JCH', 'LCH', 'ERR', 'FLN', 'LIS'];
+    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'ORS', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'NLN', 'JCH', 'LCH', 'ERR', 'FLN', 'LIS', 'PRI'];
     if(dontLog.indexOf(tag) === -1){
         console.log(message);
     }
@@ -2246,7 +2489,8 @@ function parseServerMessage(message){
                 App.characters[obj.characters[i][0]] = {
                     gender: obj.characters[i][1],
                     status: stylizeStatus(obj.characters[i][2]),
-                    statusmsg: obj.characters[i][3]
+                    statusmsg: obj.characters[i][3],
+                    pms: {}
                 };
                 App.state.logInReadyInfo.listedCharacters++;
             }
@@ -2304,6 +2548,7 @@ function parseServerMessage(message){
             break;
         case 'PRI':
             // A private message is received from another user.
+            receivePM(obj.character, obj.message, obj.character);
             break;
         case 'RLL':
             // Results of a dice roll
@@ -2408,5 +2653,10 @@ $(document).ready(function(){
     // Future session links.
     $(document).on('click', '.sessionlink', function(e){
         joinChannel($(this).attr('id'));
+    });
+    
+    $(document).on('click', '.nameplate', function(e){
+        targetViewerFor($(this).text());
+        if(App.state.currentTool !== 'viewer') toggleTool('viewer');
     });
 });

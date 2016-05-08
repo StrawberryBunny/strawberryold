@@ -150,6 +150,17 @@ html, body {
     background-color: #222222;
 }
 
+.channels .fabutton {
+    display: flex;
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+}
+
+.channels .fabutton img {
+    width: 36px;
+    height: 36px;
+}
 
 
 /* Main Chat Area */
@@ -395,17 +406,24 @@ html, body {
     background-color: #333333;
 }
 
+.selected {
+    background-color: #ea4933;
+}
+
 .channellistentry:nth-of-type(odd) {
     background-color: #222222;
+}
+
+
+.selected:nth-of-type(odd) {
+    background-color: #ea4933;
 }
 
 .channellistentry:hover {
     background-color: #ea4933;
 }
 
-.selected {
-    background-color: #ea4933;
-}
+
 
 .channellistseperator {
     padding: 10px;
