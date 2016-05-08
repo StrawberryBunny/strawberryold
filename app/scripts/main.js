@@ -1890,6 +1890,35 @@ function createDomToolInfo(){
     var domScrollerContents = $('<div class="toolinfoscrollercontents"></div>');
     domScroller.append(domScrollerContents);
     
+    // Help
+    
+    var domHelp = $('<div class="helpcontainer"></div>');
+    domScrollerContents.append(domHelp);
+    domHelp.append('<h3><b>Help</b></h3>');
+    var list = '<ul>';
+    
+    list += '<li>To view a character\'s profile click on their name.</li>';
+    list += '<li>Use the viewer to open a PM, set a bookmark, friend or unfriend, record memos and send notes.</li>';
+    list += '<li>You can use /preview before your message to preview any BBCode you\'ve used, though there\'s no need to worry.. If you\'re BBCode is invalid, it will not be sent anyway.</li>';
+    list += '<li>The feed will allow you to monitor incoming PMs and reply to them straight from there, as well as alerting you to incoming notes, friend requests, mentions and possible issues.</li>';
+    list += '<li>You can filter what kind of feed messages you\'re seeing. Having something hidden will not make the feed icon buzz or show unread messages.</li>';
+    list += '<li>The settings panel will allow you to set your desired colours for different genders, turn on and off alerts & sounds as well as let you configure what words, names and/or phrases fire a mention alert.</li>'; 
+    
+    list += '</ul>';
+    domHelp.append(list);
+    
+    // GitHub
+    var domGit = $('<div class="gitcontainer"></div>');
+    domScrollerContents.append(domGit);
+    domGit.append('<h3><b>GitHub</b></h3>');
+    
+    domGit.append('<p>Strawberry is up on GitHub <a href="https://github.com/StrawberryBunny/strawberry" target="_blank">here</a>. You can make <a href="https://github.com/StrawberryBunny/strawberry/issues" target="_blank"><span style="color: #ff0000;"><span class="fa fa-bug"></span> bug reports</span></a> there. Comments, suggestions and pull requests welcome.</p>');
+    
+    // Change log
+    var domChangeLog = $('<div class="changelogcontainer"></div>');
+    domScrollerContents.append(domChangeLog);
+    
+    domChangeLog.append('<h3><b>Changelog</b></h3>')
     for(var i = App.changelog.length - 1; i >= 0; i--){
         var dom = $('<div class="changelogentry"></div>');
         
@@ -1903,7 +1932,7 @@ function createDomToolInfo(){
         
         dom.html(html);
         
-        domScrollerContents.append(dom);
+        domChangeLog.append(dom);
     }
 }
 

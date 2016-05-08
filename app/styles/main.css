@@ -547,6 +547,10 @@ html, body {
     font-size: 24px;
 }
 
+.helpcontainer li {
+    padding: 5px;
+}
+
 /* Global */
 
 .userentry {
