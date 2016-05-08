@@ -1900,9 +1900,10 @@ function createDomToolInfo(){
     list += '<li>To view a character\'s profile click on their name.</li>';
     list += '<li>Use the viewer to open a PM, set a bookmark, friend or unfriend, record memos and send notes.</li>';
     list += '<li>You can use /preview before your message to preview any BBCode you\'ve used, though there\'s no need to worry.. If you\'re BBCode is invalid, it will not be sent anyway.</li>';
+    list += '<li>To see a full list of available commands, type /help</li>';
     list += '<li>The feed will allow you to monitor incoming PMs and reply to them straight from there, as well as alerting you to incoming notes, friend requests, mentions and possible issues.</li>';
     list += '<li>You can filter what kind of feed messages you\'re seeing. Having something hidden will not make the feed icon buzz or show unread messages.</li>';
-    list += '<li>The settings panel will allow you to set your desired colours for different genders, turn on and off alerts & sounds as well as let you configure what words, names and/or phrases fire a mention alert.</li>'; 
+    list += '<li>The settings panel will allow you to set your desired colours for different genders, turn on and off alerts & sounds as well as let you configure what words, names and/or phrases fire a mention alert.</li>';
     
     list += '</ul>';
     domHelp.append(list);
