@@ -128,7 +128,7 @@ var App = {
             settings:   { name: 'settings',     title: 'Settings',          icon: 'fa-gears',                   show: 'toolShowSettings' },
             logout:     { name: 'logout',       title: 'Logout',            icon: 'fa-sign-out',                show: 'toolShowLogout' }
         },
-        HOVER_SCROLL_SPEED: 25
+        channelListScrollingSpeed: 25
     },
     serverVars: {
         chat_max: -1,
@@ -154,6 +154,171 @@ var App = {
 	},
     changelog: [
         ['0.2', ['First changelog! Woo!', 'Nothing\'s really changed yet, though.', 'Moved from a simple notepad++ set-up to using Gulp to build my files and Bower for dependency management.']]
+    ],
+    commands: [
+        {
+            name: 'help',
+            usage: '/help <command>',
+            description: 'Displays help information for a given command. Do not include the <> brackets',
+            examples: ['/help clear', '/help bookmark'],
+            alias: ['h'],
+            func: function(e){ 
+                if(typeof e == 'undefined' || e.length == 0){
+                    App.commands[0].func('help');
+                    return false;
+                }			
+                
+                for(var i = 0; i < App.commands.length; i++){
+                    if(App.commands[i]['name'] === e){
+                        pushFeedItem('info', '[b]' + escapeHtml(App.commands[i]['name']) + '[/b][ul][li][i][color=cyan]Usage[/color][/i]: ' + escapeHtml(App.commands[i]['usage']) + '[/li][li][i][color=cyan]Description[/color][/i]: ' + escapeHtml(App.commands[i]['description']) + '[/li][li][i][color=cyan]Examples[/color][/i]: ' + escapeHtml(App.commands[i]['examples']) + '[/li][li][i][color=cyan]Aliases[/color][/i]: ' + escapeHtml(App.commands[i]['alias']) + '[/li][/ul]', true);
+                        return true;
+                    }
+                }		
+                
+                pushFeedItem("There is no command called " + e, true);
+                
+                return false;			
+            }
+        },
+        {
+            name: 'clear',
+            usage: '/clear',
+            description: 'Clears the currently active channel window.',
+            examples: ['/clear'],
+            alias: ['cls'],
+            func: function(e){
+                if(App.state.selectedChannel === ''){
+                    return false;
+                }
+                
+                var isPM = App.state.selectedChannel === 'pm';
+                if(isPM){
+                    var isPublic = App.state.selectedChannel.substr(0, 3) === 'ADH';
+                    var channels = isPublic ? App.publicChannels : App.privateChannels;
+                    channels[App.state.selectedChannel].messageDom.empty();
+                }
+                else {
+                    App.characters[App.state.selectedPM].pms.messageDom.empty();
+                }
+                
+                return true;
+            }
+        },
+        {
+            name: 'join',
+            usage: '/join <channel name>',
+            description: 'Attempts to join the given channel. If the channel is private you must use the channel\'s code instead of it\'s name. The channel code can be obtained by typing /code in the channel or by asking a channel operator. Do not include the <> brackets.',
+            examples: ['/join Dragons', '/join Cum Lovers', '/join ADH-91001d20bf2b4e2d4a61'],
+            alias: ['j'],
+            func: function(e){
+                if(typeof e === 'undefined' || e.length === 0){
+                    App.commands[0].func('join');
+                    return false;
+                }
+                
+                // Try to join the channel.
+                joinChannel(e);
+                
+                return true;
+            }
+        },
+        {
+            name: 'part',
+            usage: '/part <channel name>',
+            description: 'Attempts to leave the given channel. If the channel is private you must use the channel\'s code instead of it\'s name. The channel code can be obtained by typing /code in the channel or by asking a channel operator. Do not include the <> brackets.',
+            examples: ['/part Dragons', '/part Cum Lovers', '/part ADH-91001d20bf2b4e2d4a61'],
+            alias: ['p', 'leave', 'l'],
+            func: function(e){
+                if(typeof e === 'undefined' || e.length === 0){
+                    App.commands[0].func('part');
+                    return false;
+                }
+                
+                // Try to leave the channel
+                leaveChannel(e);
+                
+                return true;
+            }
+        },
+        {
+            name: '/me',
+            usage: '/me <action>',
+            description: 'Sends an in-character action to the active channel. Do not include the <> brackets.',
+            examples: ['/me rolls around.', '/me flop on a couch.', '/me says something witty.'],
+            alias: [],
+            func: function(e){
+                if(App.state.selectedChannel === ''){
+                    return false;
+                }
+                sendChatMessage('/me ' + e, App.state.selectedChannel);
+                return true;
+            }           
+        },
+        {
+            name: '/view',
+            usage: '/view <character name>',
+            description: 'Opens the viewer to display the given character. Do not include <> brackets.',
+            examples: ['/view Strawberry'],
+            alias: ['v'],
+            func: function(e){
+                if(typeof e === 'undefined' || e.length === 0){
+                    App.commands[0].func('view');
+                    return false;
+                }
+                
+                targetViewerFor(e);
+                return true;
+            }
+        },
+        {
+            name: 'status',
+            usage: '/status [get|set] [online|looking|busy|away|dnd] <message>',
+            description: 'Gets or sets the status for the currently logged in character. Select either get or set. Only if setting: Select one of online, looking, busy, away or dnd as your status. Everything typed after that is considered to be your status message. Do not include the [] or <> brackets.',
+            examples: ['/status get', '/status set looking Time for some fun.', '/status set dnd Leave me alone!'],
+            alias: ['s'],
+            func: function(e){
+                if(typeof e === 'undefined' || e.length === 0){
+                    App.commands[0].func('status');
+                    return false;
+                }
+                
+                var split = e.split(' ');
+                
+                if(split[0] === 'get'){
+                    pushFeedItem('info', 'Your status is currently: ' + App.characters[App.user.loggedInAs].status + ' - ' + App.characters[App.user.loggedInAs].statusmsg, true);
+                }
+                else if(split[0] === 'set'){
+                    if(split.length > 1 && split[1].length > 0){
+                        var status = split[1].toLowerCase();
+                        if(status != 'online' && status != 'looking' && status != 'busy' && status != 'away' && status != 'dnd'){
+                            // incorrect status.
+                            pushFeedItem('error', 'The status you entered is not an acceptable value.', true);
+                            App.commands[0].func('status');
+                            return false;
+                        }
+                        
+                        var message = e.substr(5 + status.length);
+                        
+                        sendMessageToServer('STA {"status": "' + status + '", "statusmsg": "' + message + '" }');
+                        return true;
+                    }
+                }
+            }
+        },
+        {
+            name: 'preview',
+            usage: '/preview <message>',
+            description: 'Posts a preview message into the active chat window that only you can see. Used for testing out BBCode before posting it for real. Do not include the <> brackets.',
+            examples: ['/preview [b][i]Whoops![/b][/i]'],
+            alias: ['pr'],
+            func: function(e){
+                if(App.state.selectedChannel !== ''){
+                    receiveMessage(App.state.selectedChannel, 'preview', e);
+                    return true;
+                }
+                return false;
+            }
+        }
     ]
 };
 
@@ -192,11 +357,30 @@ function checkForReadyStatus(){
 }
 
 function throwError(message){
-    pushFeedItem('error', message);
+    pushFeedItem('error', message, true);
 }
 
 function sendChatMessageToActiveWindow(message){
-    if(App.state.selectedChannel !== 'pm'){
+    // Catch commands.
+    if(message.charAt(0) === '/'){
+        var split = message.split(' ');
+        var command = split[0].substr(1);
+        
+        for(var i = 0; i < App.commands.length; i++){
+            if(App.commands[i].name === command){
+                return App.commands[i].func(message.substring(command.length + 2));
+            }
+            
+            for(var j = 0; j < App.commands[i].alias.length; j++){
+                if(App.commands[i].alias[j] === command){
+                    return App.commands[i].func(message.substring(command.length + 2));                    
+                }
+            }
+        }
+        
+        return false;
+    }
+    else if(App.state.selectedChannel !== 'pm'){
         return sendChatMessage(message, App.state.selectedChannel);
     }
     else {
@@ -222,7 +406,7 @@ function sendChatMessage(message, channel){
             errorMessage += '[li]' + bb.errorQueue[i] + '[/li]';        
         }
         errorMessage += '[/ul]';
-        pushFeedItem('error', errorMessage);
+        pushFeedItem('error', errorMessage, true);
         return false;
     }
 
@@ -254,7 +438,7 @@ function sendPM(message, character){
             errorMessage += '[li]' + bb.errorQueue[i] + '[/li]';        
         }
         errorMessage += '[/ul]';
-        pushFeedItem('error', errorMessage);
+        pushFeedItem('error', errorMessage, true);
         return false;
     }
     
@@ -465,12 +649,16 @@ function openChannel(name){
         channels[name].userlistDom.append(dom);
     }
     
-    // Set this channel's entry in the room list to on.
-    channels[name].listEntry.addClass('selected');
     
-    // Update this channel's entry in the room list's char count
-    var count = parseInt(channels[name].listEntry.find('#charcount').text());
-    channels[name].listEntry.find('#charcount').text(count + 1);
+    // If this channel is listed (Ie not a private/locked room.);
+    if(typeof channels[name].listEntry !== 'undefined'){
+        // Set this channel's entry in the room list to on.
+        channels[name].listEntry.addClass('selected');    
+    
+        // Update this channel's entry in the room list's char count
+        var count = parseInt(channels[name].listEntry.find('#charcount').text());
+        channels[name].listEntry.find('#charcount').text(count + 1);
+    }
 
     // If no channel is selected, select this one
     if(App.state.selectedChannel === ''){
@@ -487,7 +675,7 @@ function closeChannel(name){
     if(App.state.openChannels.indexOf(name) === -1){
         console.log('Error: Trying to close a channel that isn\'t open: ' + name);
         console.log(JSON.stringify(App.state.openChannels));
-        pushFeedItem('error', 'Tried to close channel ' + name + ' when it isn\'t open.');
+        pushFeedItem('error', 'Tried to close channel ' + name + ' when it isn\'t open.', true);
         return;
     }
 
@@ -504,11 +692,13 @@ function closeChannel(name){
     App.state.openChannels.splice(App.state.openChannels.indexOf(name), 1);
     
     // Unselect this channel's entry in the channel list
-    channels[name].listEntry.removeClass('selected');    
-    
-    // Update this channel's entry in the room list's char count
-    var count = parseInt(channels[name].listEntry.find('#charcount').text());
-    channels[name].listEntry.find('#charcount').text(count - 1);
+    if(typeof channels[name].listEntry !== 'undefined'){
+        channels[name].listEntry.removeClass('selected');    
+        
+        // Update this channel's entry in the room list's char count
+        var count = parseInt(channels[name].listEntry.find('#charcount').text());
+        channels[name].listEntry.find('#charcount').text(count - 1);
+    }
     
     // Remove button from button list
     var index = App.dom.buttonList.indexOf(channels[name].buttonDom);
@@ -561,7 +751,7 @@ function characterLeftChannel(character, channel){
     var removed = channels[channel].users.splice(character, 1);
     if(typeof removed === 'undefined'){
         // Tried to remove a character from a room but they weren't in there? Wtf.
-        pushFeedItem('error', 'Server informed us that ' + character + ' left ' + channel + ' but we did not have them listed.');
+        pushFeedItem('error', 'Server informed us that ' + character + ' left ' + channel + ' but we did not have them listed.', true);
         return;
     }
     
@@ -691,7 +881,7 @@ function closePM(character){
     if(App.state.openPMs.indexOf(character) === -1){
         console.log('Error: Trying to close a PM that isn\'t open: ' +character);
         console.log(JSON.stringify(App.state.openPMs));
-        pushFeedItem('error', 'Tried to close PM for ' + character + ' when it isn\'t open.');
+        pushFeedItem('error', 'Tried to close PM for ' + character + ' when it isn\'t open.', true);
         return;
     }
 
@@ -821,7 +1011,7 @@ function channelListUpdated(){ // Called from parseServerMessage() when the publ
 }
 
 /* Feed */
-function pushFeedItem(type, message){
+function pushFeedItem(type, message, showFeed){
     // Process BBCODE
     var bb = XBBCODE.process({
         text: message
@@ -842,6 +1032,10 @@ function pushFeedItem(type, message){
             App.tools['feed'].counter.text.fadeIn();
 
         }
+    }
+    
+    if(showFeed && App.state.currentTool !== 'feed'){
+        toggleTool('feed');
     }
 }
 
@@ -966,7 +1160,7 @@ function targetViewerFor(target){
     }
     
     // Disable all buttons
-    App.tools['viewer'].buttonPM.addClass('disabled');
+    //App.tools['viewer'].buttonPM.addClass('disabled');
     App.tools['viewer'].buttonBookmark.addClass('disabled');
     App.tools['viewer'].buttonFriend.addClass('disabled');
     App.tools['viewer'].buttonMemo.addClass('disabled');
@@ -1073,7 +1267,7 @@ function viewerUpdatePictures(data){
     }
     
     // Re-enable buttons.
-    App.tools['viewer'].buttonPM.removeClass('disabled');
+    //App.tools['viewer'].buttonPM.removeClass('disabled');
     App.tools['viewer'].buttonBookmark.removeClass('disabled');
     App.tools['viewer'].buttonFriend.removeClass('disabled');
     App.tools['viewer'].buttonMemo.removeClass('disabled');
@@ -1222,6 +1416,12 @@ function escapeHtml(string) {
 	return String(string).replace(/[&<>"'\/]/g, function (s) {
 		return entityMap[s];
     });
+}
+
+function unescapeHtml(string){
+    var e = document.createElement('div');
+    e.innerHTML = string;
+    return e.childNodes.length === 0 ? "" : e.childNodes[0].nodeValue;
 }
 
 function escapeJson(string){
@@ -1420,7 +1620,7 @@ function postForSetMemo(characterID, note){
                 prog.show();  
                 
                 // Feed
-                pushFeedItem('error', 'There was a problem saving the memo: ' + data.error);
+                pushFeedItem('error', 'There was a problem saving the memo: ' + data.error, true);
             }
             else {
                 // Change the progress to show the result.
@@ -1602,12 +1802,12 @@ function createDomMain(){
                         if(chanList.height() > domChannels.height()){
                             if(App.dom.channelListScrolling.channelMouseDistance < 0.1){
                                 var val = 1 - (App.dom.channelListScrolling.channelMouseDistance / 0.1);
-                                var amount = App.consts.HOVER_SCROLL_SPEED * val;
+                                var amount = App.consts.channelListScrollingSpeed * val;
                                  App.dom.channelListScrolling.curBottomMargin += amount;					
                             }
                             else if(App.dom.channelListScrolling.channelMouseDistance > 0.9) {
                                 var val = (App.dom.channelListScrolling.channelMouseDistance - 0.9) / 0.1;
-                                var amount = App.consts.HOVER_SCROLL_SPEED * val;
+                                var amount = App.consts.channelListScrollingSpeed * val;
                                  App.dom.channelListScrolling.curBottomMargin -= amount;					
                             }
                             
@@ -2272,16 +2472,19 @@ function createDomMessage(character, message){
     var domContainer = $('<div class="message"></div>');
     
     var finalMessage = '';
-    if(character.toLowerCase() !== 'description'){
+    if(character.toLowerCase() === 'description'){
+        finalMessage = '<b>Description</b>: ';
+    }
+    else if(character.toLowerCase() === 'preview'){
+        finalMessage = '<b>Preview</b>: ';
+    }
+    else {
         var gender = App.characters[character].gender;
         var status = App.characters[character].status;
         var statusmsg = App.characters[character].statusmsg;
         var userEntry = createDomUserEntry(character, gender, status, statusmsg);
         domContainer.append(userEntry);
         finalMessage = ': ';
-    }
-    else {
-        finalMessage = '<b>Description</b>: ';
     }
     
     var bb = XBBCODE.process({
@@ -2323,7 +2526,7 @@ function openWebSocket(account, ticket, characterName){
     App.connection.onerror = function(error){
         // TODO (Do we need to take action?)
         console.log('WebSocket error: ' + error);
-        pushFeedItem('error', 'WebSocket error: ' + error);
+        pushFeedItem('error', 'WebSocket error: ' + error, true);
     };
 
     App.connection.onmessage = function(e){
@@ -2333,7 +2536,7 @@ function openWebSocket(account, ticket, characterName){
     App.connection.onclose = function(e){
         var msg = 'WebSocket closed with code: ' + e.code + ', reason: ' + e.reason + ', wasClean: ' + e.wasClean;
         console.log(msg);
-        pushFeedItem('error', msg);
+        pushFeedItem('error', msg, true);
         // TODO (Do we need to take action?)
     };
 }
@@ -2362,7 +2565,7 @@ function parseServerMessage(message){
             break;
         case 'BRO':
             // Incoming admin broadcast
-            pushFeedItem('info', '<b>Admin Broadcast</b>: ' + obj.message);
+            pushFeedItem('info', '<b>Admin Broadcast</b>: ' + obj.message, true);
             break;
         case 'CDS':
             // A channel's description has changed. (Also sent in response to JCH)
@@ -2394,8 +2597,17 @@ function parseServerMessage(message){
             sendMessageToServer('ORS');
             break;
         case 'CIU':
+            // Store title
+            var isPublic = obj.name.substr(0, 3) === 'ADH';
+            var channels = isPublic ? App.publicChannels : App.privateChannels;
+            if(typeof channels[obj.name] === 'undefined'){
+                channels[obj.name] = {};
+            }
+            channels[obj.name].name = obj.name;
+            channels[obj.name].title = obj.title;            
+        
             // Receiving an invite to a channel.
-            pushFeedItem('info', obj.sender + ' has invited you to ' + obj.title);
+            pushFeedItem('info', obj.sender + ' has invited you to [session=' + obj.title + ']' + obj.name + '[/session]', true);
             break;
         case 'CBU':
             // Removes a user from a channel and prevents them from entering. (This just happened or.. what?)
@@ -2410,6 +2622,11 @@ function parseServerMessage(message){
             // Gives a list of chat ops. Sent in response to JCH
             var isPublic = obj.channel.substr(0, 3) !== 'ADH';
             var channels = isPublic ? App.publicChannels : App.privateChannels;
+            
+            if(typeof channels[obj.channel] === 'undefined'){
+                channels[obj.channel] = {};
+            }
+            
             channels[obj.channel].ops = obj.oplist;
             break;
         case 'CON':
@@ -2467,11 +2684,13 @@ function parseServerMessage(message){
 
             // Do we have any info for this channel?
             if(typeof channels[obj.channel] === 'undefined'){
-                channels[obj.channel] = {
-                    name: name,
-                    title: isPublic ? name : 'unknown',
-                    mode: 'unknown'
-                };
+                channels[obj.channel] = {};
+            }
+            
+            channels[obj.channel].mode = obj.mode;
+            channels[obj.channel].name = obj.channel;
+            if(isPublic){
+                channels[obj.channel].title = obj.channel;
             }
 
             // Store user list. Wipe out any existing userlist, we're getting a new, whole one.
@@ -2521,9 +2740,18 @@ function parseServerMessage(message){
         case 'JCH':
             // Indicates the given user has joined the given channel. This my also be the client's character.
             // Don't use to know when we've joined a room. Use ICH.
+            
+            var isPublic = obj.channel.substr(0, 3) !== 'ADH';
             if(obj.character.identity !== App.user.loggedInAs){
                 characterJoinedChannel(obj.character.identity, obj.channel);
-            }            
+            }   
+            // If this is a private/locked room.         
+            else if(!isPublic && typeof App.privateChannels[obj.channel] === 'undefined'){
+                App.privateChannels[obj.channel] = {
+                    name: obj.channel,
+                    title: obj.title
+                };
+            }
             break;
         case 'KID':
             // Kinks data in response to a KIN command.
@@ -2612,7 +2840,7 @@ function parseServerMessage(message){
             break;
         case 'RTB':
             // Real-time bridge. Indicates the user received a note or message, right at the very moment this is received.
-            pushFeedItem('info', 'Real-Time Bridge - Received ' + obj.type + ' from ' + obj.character + '.');
+            pushFeedItem('info', 'Real-Time Bridge - Received ' + obj.type + ' from ' + obj.character + '.', true);
             break;
         case 'SFC':
             // Alerts admins and chatops of an issue.
@@ -2654,14 +2882,11 @@ function parseServerMessage(message){
         case 'VAR':
             // Variables the server sends to inform the client about server variables.
             App.serverVars[obj.variable] = obj.value;
-            if(obj.variable === 'permissions' && obj.value !== '0'){
-                pushFeedItem('info', 'Welcome F-List Staff member! Let me know if there\'s anything Strawberry can do to help you out!');
-            }
             break;
         default:
             var msg = "Server received an unhandled message: " + message;
             console.log(msg);
-            pushFeedItem('error', msg);
+            pushFeedItem('error', msg, true);
             break;
     }
 }
