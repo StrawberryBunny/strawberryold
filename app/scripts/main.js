@@ -6,11 +6,6 @@
  * App Data ====================================================================================================================
  */
 
-var mouseOverChannelButtons = false;
-var channelScrollingInterval;
-var curBottomMargin = 0;
-var channelMouseDistance = 0.5;
-
 var App = {
     connection: null, // The WebSocket connection
     characters: {},
@@ -26,7 +21,12 @@ var App = {
         noChannelImage: null,
         mainTextEntry: null,
         mainTextEntryButton: null,
-        buttonList: []
+        buttonList: [],
+        channelListScrolling: {
+            channelScrollingInterval: null,
+            curBottomMargin: 0,
+            channelMouseDistance: 0.5
+        }
     },
     user: { // Collection for items related to the user.
         account: '',            // String (account name)
@@ -1595,31 +1595,30 @@ function createDomMain(){
                     domChannels.on('mousemove', function(e){
                         // Caclulate the distance down the channel list
                         var parentOffset = domChannels.parent().offset();
-                        channelMouseDistance = (e.pageY - parentOffset.top) / domChannels.height();					
+                        App.dom.channelListScrolling.channelMouseDistance = (e.pageY - parentOffset.top) / domChannels.height();					
                     });
-                    mouseOverChannelButtons = true;
-                    channelScrollingInterval = setInterval(function(){
+                    App.dom.channelListScrolling.channelScrollingInterval = setInterval(function(){
                         var chanList = domChannelList;
                         if(chanList.height() > domChannels.height()){
-                            if(channelMouseDistance < 0.1){
-                                var val = 1 - (channelMouseDistance / 0.1);
+                            if(App.dom.channelListScrolling.channelMouseDistance < 0.1){
+                                var val = 1 - (App.dom.channelListScrolling.channelMouseDistance / 0.1);
                                 var amount = App.consts.HOVER_SCROLL_SPEED * val;
-                                curBottomMargin += amount;					
+                                 App.dom.channelListScrolling.curBottomMargin += amount;					
                             }
-                            else if(channelMouseDistance > 0.9) {
-                                var val = (channelMouseDistance - 0.9) / 0.1;
+                            else if(App.dom.channelListScrolling.channelMouseDistance > 0.9) {
+                                var val = (App.dom.channelListScrolling.channelMouseDistance - 0.9) / 0.1;
                                 var amount = App.consts.HOVER_SCROLL_SPEED * val;
-                                curBottomMargin -= amount;					
+                                 App.dom.channelListScrolling.curBottomMargin -= amount;					
                             }
                             
                             // Limit				
-                            if(curBottomMargin > 0){
-                                curBottomMargin = 0;
+                            if( App.dom.channelListScrolling.curBottomMargin > 0){
+                                 App.dom.channelListScrolling.curBottomMargin = 0;
                             }
-                            else if(curBottomMargin < domChannels.height() - chanList.height()){
-                                curBottomMargin = domChannels.height() - chanList.height();
+                            else if( App.dom.channelListScrolling.curBottomMargin < domChannels.height() - chanList.height()){
+                                 App.dom.channelListScrolling.curBottomMargin = domChannels.height() - chanList.height();
                             }
-                            chanList.css('margin-top', curBottomMargin);
+                            chanList.css('margin-top',  App.dom.channelListScrolling.curBottomMargin);
                         }		
                     }, 50);
                 });
@@ -1627,7 +1626,7 @@ function createDomMain(){
                     // Stop listening for mouse move events
                     domChannels.off('mousemove');
                     // Kill interval
-                    clearInterval(channelScrollingInterval);
+                    clearInterval(App.dom.channelListScrolling.channelScrollingInterval);
                 });
                 
                 
