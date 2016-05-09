@@ -45,7 +45,8 @@
 	  "dot-notation": 0,
     "camelcase": 0,
     "no-unused-vars": 0,
-    "space-infix-ops": 0
+    "space-infix-ops": 0,
+    "no-loop-func": 0
     }
   }
 }

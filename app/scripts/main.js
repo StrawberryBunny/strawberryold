@@ -163,7 +163,7 @@ var App = {
             examples: ['/help clear', '/help bookmark'],
             alias: ['h'],
             func: function(e){ 
-                if(typeof e == 'undefined' || e.length == 0){
+                if(typeof e === 'undefined' || e.length === 0){
                     App.commands[0].func('help');
                     return false;
                 }			
@@ -175,9 +175,24 @@ var App = {
                     }
                 }		
                 
-                pushFeedItem("There is no command called " + e, true);
+                pushFeedItem('error', 'There is no command called ' + e, true);
                 
                 return false;			
+            }
+        },
+        {
+            name: 'commands',
+            usage: '/commands',
+            description: 'Lists all available commands.',
+            examples: ['/commands'],
+            alias: ['c'],
+            func: function(e){
+                var msg = '[ul]';
+                for(var i = 0; i < App.commands.length; i++){
+                    msg += '[li]/' + App.commands[i].name + '[/li]';
+                }
+                msg += '[/ul]';
+                pushFeedItem('info', msg, true);
             }
         },
         {
@@ -241,7 +256,7 @@ var App = {
             }
         },
         {
-            name: '/me',
+            name: 'me',
             usage: '/me <action>',
             description: 'Sends an in-character action to the active channel. Do not include the <> brackets.',
             examples: ['/me rolls around.', '/me flop on a couch.', '/me says something witty.'],
@@ -255,7 +270,7 @@ var App = {
             }           
         },
         {
-            name: '/view',
+            name: 'view',
             usage: '/view <character name>',
             description: 'Opens the viewer to display the given character. Do not include <> brackets.',
             examples: ['/view Strawberry'],
@@ -290,7 +305,7 @@ var App = {
                 else if(split[0] === 'set'){
                     if(split.length > 1 && split[1].length > 0){
                         var status = split[1].toLowerCase();
-                        if(status != 'online' && status != 'looking' && status != 'busy' && status != 'away' && status != 'dnd'){
+                        if(status !== 'online' && status !== 'looking' && status !== 'busy' && status !== 'away' && status !== 'dnd'){
                             // incorrect status.
                             pushFeedItem('error', 'The status you entered is not an acceptable value.', true);
                             App.commands[0].func('status');
@@ -507,10 +522,10 @@ function characterWentOffline(character){
     
     // Was this character our friend or bookmark?
     if(App.user.friendsList[App.user.loggedInAs].indexOf(character) !== -1){
-        pushFeedItem('friendinfo', 'Your friend ' + character + ' has gone offline.');
+        pushFeedItem('friendinfo', 'Your friend ' + character + ' has gone offline.', false, true);
     }
     else if(App.user.bookmarks.indexOf(character) !== -1){
-        pushFeedItem('bookmarkinfo', 'Your bookmark ' + character + ' has gone offline.');
+        pushFeedItem('bookmarkinfo', 'Your bookmark ' + character + ' has gone offline.', false, true);
     }
 }
 
@@ -673,7 +688,7 @@ function leaveChannel(name){
 function closeChannel(name){
     // If this channel isn't in the list of open channels.
     if(App.state.openChannels.indexOf(name) === -1){
-        console.log('Error: Trying to close a channel that isn\'t open: ' + name);
+        //console.log('Error: Trying to close a channel that isn\'t open: ' + name);
         console.log(JSON.stringify(App.state.openChannels));
         pushFeedItem('error', 'Tried to close channel ' + name + ' when it isn\'t open.', true);
         return;
@@ -1011,7 +1026,7 @@ function channelListUpdated(){ // Called from parseServerMessage() when the publ
 }
 
 /* Feed */
-function pushFeedItem(type, message, showFeed){
+function pushFeedItem(type, message, showFeed, count){
     // Process BBCODE
     var bb = XBBCODE.process({
         text: message
@@ -1024,18 +1039,16 @@ function pushFeedItem(type, message, showFeed){
     if(App.state.currentTool === 'feed' && App.tools['feed'].currentlyDisplaying === false){
         displayQueuedFeedMessages();
     }
-    else {
-        // Increment and show the counter.
-        if(typeof App.tools['feed'].counter !== 'undefined'){
-            App.tools['feed'].counter.text.text(App.tools['feed'].queue.length);
-            App.tools['feed'].counter.image.fadeIn();
-            App.tools['feed'].counter.text.fadeIn();
-
-        }
+    // Increment and show the counter
+    else if(count && typeof App.tools['feed'].counter !== 'undefined'){
+        App.tools['feed'].counter.text.text(parseInt(App.tools['feed'].counter.text.text()) + 1);
+        App.tools['feed'].counter.image.fadeIn();
+        App.tools['feed'].counter.text.fadeIn();
     }
     
     if(showFeed && App.state.currentTool !== 'feed'){
         toggleTool('feed');
+        displayQueuedFeedMessages();
     }
 }
 
@@ -1074,7 +1087,7 @@ function displayNextFeedMessage(iterate){
 
     // Fade in new message
     domMsg.hide();
-    domMsg.fadeIn(1000, function(){
+    domMsg.fadeIn(500, function(){
         // Decrement the feed counter
         var curCount = parseInt(App.tools['feed'].counter.text.text());
         App.tools['feed'].counter.text.text(App.tools['feed'].queue.length + 1);
@@ -1095,7 +1108,7 @@ function displayNextFeedMessage(iterate){
 
     // If iterate
     if(iterate && App.tools['feed'].queue.length > 0){
-        setTimeout(createNextFeedMessageTimeoutCallback(iterate), 800);
+        setTimeout(createNextFeedMessageTimeoutCallback(iterate), 200);
     }
     else {
         App.tools['feed'].currentlyDisplaying = false;
@@ -1421,7 +1434,7 @@ function escapeHtml(string) {
 function unescapeHtml(string){
     var e = document.createElement('div');
     e.innerHTML = string;
-    return e.childNodes.length === 0 ? "" : e.childNodes[0].nodeValue;
+    return e.childNodes.length === 0 ? '' : e.childNodes[0].nodeValue;
 }
 
 function escapeJson(string){
@@ -1792,23 +1805,24 @@ function createDomMain(){
                 // Make open channel list scrollable
                 domChannels.mouseenter(function(e){
                    // Start listening for mouse move events
-                    domChannels.on('mousemove', function(e){
+                    domChannels.on('mousemove', function(e2){
                         // Caclulate the distance down the channel list
                         var parentOffset = domChannels.parent().offset();
-                        App.dom.channelListScrolling.channelMouseDistance = (e.pageY - parentOffset.top) / domChannels.height();					
+                        App.dom.channelListScrolling.channelMouseDistance = (e2.pageY - parentOffset.top) / domChannels.height();					
                     });
                     App.dom.channelListScrolling.channelScrollingInterval = setInterval(function(){
                         var chanList = domChannelList;
+                        var val, amount;
                         if(chanList.height() > domChannels.height()){
                             if(App.dom.channelListScrolling.channelMouseDistance < 0.1){
-                                var val = 1 - (App.dom.channelListScrolling.channelMouseDistance / 0.1);
-                                var amount = App.consts.channelListScrollingSpeed * val;
-                                 App.dom.channelListScrolling.curBottomMargin += amount;					
+                                val = 1 - (App.dom.channelListScrolling.channelMouseDistance / 0.1);
+                                amount = App.consts.channelListScrollingSpeed * val;
+                                App.dom.channelListScrolling.curBottomMargin += amount;					
                             }
                             else if(App.dom.channelListScrolling.channelMouseDistance > 0.9) {
-                                var val = (App.dom.channelListScrolling.channelMouseDistance - 0.9) / 0.1;
-                                var amount = App.consts.channelListScrollingSpeed * val;
-                                 App.dom.channelListScrolling.curBottomMargin -= amount;					
+                                val = (App.dom.channelListScrolling.channelMouseDistance - 0.9) / 0.1;
+                                amount = App.consts.channelListScrollingSpeed * val;
+                                App.dom.channelListScrolling.curBottomMargin -= amount;					
                             }
                             
                             // Limit				
@@ -1964,11 +1978,13 @@ function createFeedMessageCounter(){
     domText.hide();
     
     // Should we show them already?
-    if(App.tools['feed'].queue.length > 0){
+    App.tools['feed'].counter.text.text('0');
+    
+    /*if(App.tools['feed'].queue.length > 0){
         App.tools['feed'].counter.text.text(App.tools['feed'].queue.length);
         App.tools['feed'].counter.image.fadeIn();
         App.tools['feed'].counter.text.fadeIn();
-    }
+    }*/
 }
 
 /* Individual Tools */
@@ -2387,8 +2403,9 @@ function createDomToolInfo(){
     
     list += '<li>To view a character\'s profile click on their name.</li>';
     list += '<li>Use the viewer to open a PM, set a bookmark, friend or unfriend, record memos and send notes.</li>';
+    list += '<li>Hold Ctrl/Command and press spacebar to switch to the next channel.</li>';
     list += '<li>You can use /preview before your message to preview any BBCode you\'ve used, though there\'s no need to worry.. If you\'re BBCode is invalid, it will not be sent anyway.</li>';
-    list += '<li>To see a full list of available commands, type /help</li>';
+    list += '<li>To see a full list of available commands, type /commands</li>';
     list += '<li>The feed will allow you to monitor incoming PMs and reply to them straight from there, as well as alerting you to incoming notes, friend requests, mentions and possible issues.</li>';
     list += '<li>You can filter what kind of feed messages you\'re seeing. Having something hidden will not make the feed icon buzz or show unread messages.</li>';
     list += '<li>The settings panel will allow you to set your desired colours for different genders, turn on and off alerts & sounds as well as let you configure what words, names and/or phrases fire a mention alert.</li>';
@@ -2554,6 +2571,8 @@ function parseServerMessage(message){
     if(dontLog.indexOf(tag) === -1){
         console.log(message);
     }
+    
+    var isPublic, channels, i, msg;
 
     switch(tag){
         case 'ADL':
@@ -2569,8 +2588,8 @@ function parseServerMessage(message){
             break;
         case 'CDS':
             // A channel's description has changed. (Also sent in response to JCH)
-            var isPublic = obj.channel.substr(0, 3) !== 'ADH';
-            var channels = isPublic ? App.publicChannels : App.privateChannels;
+            isPublic = obj.channel.substr(0, 3) !== 'ADH';
+            channels = isPublic ? App.publicChannels : App.privateChannels;
             var showNewDescription = typeof channels[obj.channel].description === 'undefined' || channels[obj.channel].description !== obj.description;
             if(showNewDescription){            
                 receiveMessage(obj.channel, 'Description', obj.description);
@@ -2582,7 +2601,7 @@ function parseServerMessage(message){
             // Receiving a list of all public channels.
 
             // Update our list of channels.
-            for(var i = 0; i < obj.channels.length; i++){
+            for(i = 0; i < obj.channels.length; i++){
                 if(typeof App.publicChannels[obj.channels[i].name] === 'undefined'){
                     App.publicChannels[obj.channels[i].name] = {};
                 }
@@ -2598,8 +2617,8 @@ function parseServerMessage(message){
             break;
         case 'CIU':
             // Store title
-            var isPublic = obj.name.substr(0, 3) === 'ADH';
-            var channels = isPublic ? App.publicChannels : App.privateChannels;
+            isPublic = obj.name.substr(0, 3) === 'ADH';
+            channels = isPublic ? App.publicChannels : App.privateChannels;
             if(typeof channels[obj.name] === 'undefined'){
                 channels[obj.name] = {};
             }
@@ -2607,7 +2626,7 @@ function parseServerMessage(message){
             channels[obj.name].title = obj.title;            
         
             // Receiving an invite to a channel.
-            pushFeedItem('info', obj.sender + ' has invited you to [session=' + obj.title + ']' + obj.name + '[/session]', true);
+            pushFeedItem('info', obj.sender + ' has invited you to [session=' + obj.title + ']' + obj.name + '[/session]', false, true);
             break;
         case 'CBU':
             // Removes a user from a channel and prevents them from entering. (This just happened or.. what?)
@@ -2620,8 +2639,8 @@ function parseServerMessage(message){
             break;
         case 'COL':
             // Gives a list of chat ops. Sent in response to JCH
-            var isPublic = obj.channel.substr(0, 3) !== 'ADH';
-            var channels = isPublic ? App.publicChannels : App.privateChannels;
+            isPublic = obj.channel.substr(0, 3) !== 'ADH';
+            channels = isPublic ? App.publicChannels : App.privateChannels;
             
             if(typeof channels[obj.channel] === 'undefined'){
                 channels[obj.channel] = {};
@@ -2631,7 +2650,7 @@ function parseServerMessage(message){
             break;
         case 'CON':
             // The number of connected users. Received after connecting and identifying.
-            pushFeedItem('info', 'There are currently ' + obj.count + ' users logged in.');
+            pushFeedItem('info', 'There are currently ' + obj.count + ' users logged in.', false);
             App.state.logInReadyInfo.initialCharacterCount = obj.count;
             break;
         case 'COR':
@@ -2656,9 +2675,12 @@ function parseServerMessage(message){
                     // Indentification failed.
                     servErrorIdentification();
                     break;
+                case 26:
+                    throwError('Could not locate the requested channel.');
+                    break;
                 case 28:
                     throwError('You are already in the requested channel.');
-                    break;
+                    break;                
             }
             break;
         case 'FKS':
@@ -2673,14 +2695,14 @@ function parseServerMessage(message){
             break;
         case 'HLO':
             // Server hello command. Tells which server version is running and who wrote it.
-            pushFeedItem('info', obj.message);
+            pushFeedItem('info', obj.message, false, true);
             break;
         case 'ICH':
             // Initial channel data. Received in response to JCH along with CDS. (userlist, channelname, mode)
             
             // Is this channel public or private?
-            var isPublic = obj.channel.substr(0, 3) !== 'ADH';
-            var channels = isPublic ? App.publicChannels : App.privateChannels;
+            isPublic = obj.channel.substr(0, 3) !== 'ADH';
+            channels = isPublic ? App.publicChannels : App.privateChannels;
 
             // Do we have any info for this channel?
             if(typeof channels[obj.channel] === 'undefined'){
@@ -2695,7 +2717,7 @@ function parseServerMessage(message){
 
             // Store user list. Wipe out any existing userlist, we're getting a new, whole one.
             channels[obj.channel].users = [];
-            for(var i = 0; i < obj.users.length; i++){
+            for(i = 0; i < obj.users.length; i++){
                 channels[obj.channel].users.push(obj.users[i].identity);
             }
 
@@ -2729,10 +2751,10 @@ function parseServerMessage(message){
                 case 'delete': // Acknoledges the deletion of an ignore.
                     break;
                 case 'list': // ?
-                    pushFeedItem('info', 'Received an IGN with action: list');
+                    pushFeedItem('info', 'Received an IGN with action: list', false, true);
                     break;
                 case 'notify': // ?
-                    pushFeedItem('info', 'Received an IGN with action: notify');
+                    pushFeedItem('info', 'Received an IGN with action: notify', false, true);
                     break;
             }
 
@@ -2741,7 +2763,7 @@ function parseServerMessage(message){
             // Indicates the given user has joined the given channel. This my also be the client's character.
             // Don't use to know when we've joined a room. Use ICH.
             
-            var isPublic = obj.channel.substr(0, 3) !== 'ADH';
+            isPublic = obj.channel.substr(0, 3) !== 'ADH';
             if(obj.character.identity !== App.user.loggedInAs){
                 characterJoinedChannel(obj.character.identity, obj.channel);
             }   
@@ -2758,16 +2780,18 @@ function parseServerMessage(message){
             break;
         case 'LCH':
             // Indicates that the given user has left the given channel. This may also be the client's character.
-            if(obj.character === App.user.loggedInAs){
-                closeChannel(obj.channel);
-            }
-            else {
-                characterLeftChannel(obj.character, obj.channel);
+            if(App.state.openChannels.indexOf(obj.channel) !== -1){
+                if(obj.character === App.user.loggedInAs){
+                    closeChannel(obj.channel);
+                }
+                else {
+                    characterLeftChannel(obj.character, obj.channel);
+                }
             }
             break;
         case 'LIS':
             // Receives an array of all the online characters and their gender, status and status msg. (often sent in batches. Use CON to know when we have them all)
-            for(var i = 0; i < obj.characters.length; i++){
+            for(i = 0; i < obj.characters.length; i++){
                 App.characters[obj.characters[i][0]] = {
                     gender: obj.characters[i][1],
                     status: stylizeStatus(obj.characters[i][2]),
@@ -2777,7 +2801,7 @@ function parseServerMessage(message){
                 App.state.logInReadyInfo.listedCharacters++;
             }
 
-            pushFeedItem('info', 'Received character payload of ' + obj.characters.length + ' character' + (obj.characters.length > 1 ? 's' : '') + '.');
+            pushFeedItem('info', 'Received character payload of ' + obj.characters.length + ' character' + (obj.characters.length > 1 ? 's' : '') + '.', false, true);
 
             // If the amount of characters now matches or is greater than con, we've received the full user list.
             if(App.state.logInReadyInfo.listedCharacters >= App.state.logInReadyInfo.initialCharacterCount){
@@ -2800,13 +2824,23 @@ function parseServerMessage(message){
             App.characters[obj.identity].gender = obj.gender;
             App.characters[obj.identity].status = stylizeStatus(obj.status);
 
-            // TODO Show a feed item if this user is our friend.
+            // Was this character our friend or bookmark?
+            
+            if(obj.identity !== App.user.loggedInAs){
+                if(App.user.friendsList[App.user.loggedInAs].indexOf(character) !== -1){
+                    pushFeedItem('friendinfo', 'Your friend ' + character + ' has come online.', false, true);
+                }
+                else if(App.user.bookmarks.indexOf(character) !== -1){
+                    pushFeedItem('bookmarkinfo', 'Your bookmark ' + character + ' has come online.', false, true);
+                }
+            }
+            
             break;
         case 'ORS':
             // A list of open private rooms.
 
              // Update our list of channels.
-            for(var i = 0; i < obj.channels.length; i++){
+            for(i = 0; i < obj.channels.length; i++){
                 if(typeof App.privateChannels[obj.channels[i].name] === 'undefined'){
                     App.privateChannels[obj.channels[i].name] = {};
                 }
@@ -2840,7 +2874,7 @@ function parseServerMessage(message){
             break;
         case 'RTB':
             // Real-time bridge. Indicates the user received a note or message, right at the very moment this is received.
-            pushFeedItem('info', 'Real-Time Bridge - Received ' + obj.type + ' from ' + obj.character + '.', true);
+            pushFeedItem('info', 'Real-Time Bridge - Received ' + obj.type + ' from ' + obj.character + '.', false, true);
             break;
         case 'SFC':
             // Alerts admins and chatops of an issue.
@@ -2859,7 +2893,7 @@ function parseServerMessage(message){
             break;
         case 'UPT':
             // Informs the client of the server's self-tracked online time and a few other bits of information.
-            var msg = '[b]System Information[/b]';
+            msg = '[b]System Information[/b]';
             msg += '[ul]';
                 msg += '[li]Uptime: ' + msToTime(new Date().getTime() - (parseInt(obj.starttime) * 1000)) + '[/li]';
                 msg += '[li]Channels: ' + obj.channels + '[/li]';
@@ -2867,7 +2901,7 @@ function parseServerMessage(message){
 				msg += '[li]Max simultaneous users since last restart: ' + obj.maxusers + '[/li]';
 				msg += '[li]Accepted Connections: ' + obj.accepted + '[/li]';
             msg += '[/ul]';
-            pushFeedItem('info', msg);
+            pushFeedItem('info', msg, false, true);
             
             // Server info retrieved
             App.state.logInReadyInfo.serverInfoRetrieved = true;
@@ -2884,7 +2918,7 @@ function parseServerMessage(message){
             App.serverVars[obj.variable] = obj.value;
             break;
         default:
-            var msg = "Server received an unhandled message: " + message;
+            msg = 'Server received an unhandled message: ' + message;
             console.log(msg);
             pushFeedItem('error', msg, true);
             break;
@@ -2938,7 +2972,9 @@ $(document).ready(function(){
     // Future nameplate links.
     $(document).on('click', '.nameplate', function(e){
         targetViewerFor($(this).text());
-        if(App.state.currentTool !== 'viewer') toggleTool('viewer');
+        if(App.state.currentTool !== 'viewer') {
+            toggleTool('viewer');
+        }
     });
     
     // Changing channels with a key.
