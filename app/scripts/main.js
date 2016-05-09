@@ -2935,8 +2935,51 @@ $(document).ready(function(){
         joinChannel($(this).attr('id'));
     });
     
+    // Future nameplate links.
     $(document).on('click', '.nameplate', function(e){
         targetViewerFor($(this).text());
         if(App.state.currentTool !== 'viewer') toggleTool('viewer');
+    });
+    
+    // Changing channels with a key.
+    $(document).on('keyup', function(e){
+        // Ctrl+Space to switch channels.
+        if(e.which === 32 && e.ctrlKey){
+            // If no channels/pms open.
+            if(App.state.selectedChannel === ''){
+                return;
+            }
+            
+            // Go to next channel
+            var buttonDom;
+            var isPM = App.state.selectedChannel === 'pm';
+            if(isPM){
+                buttonDom = App.characters[App.state.selectedPM].pms.buttonDom;
+            }
+            else {
+                var isPublic = App.state.selectedChannel.substr(0, 3) !== 'ADH';
+                var channels = isPublic ? App.publicChannels : App.privateChannels;
+                buttonDom = channels[App.state.selectedChannel].buttonDom;
+            }
+            
+            var currentIndex = App.dom.buttonList.indexOf(buttonDom);
+            var newIndex = currentIndex + 1;
+            
+            if(newIndex >= App.dom.buttonList.length){
+                newIndex = 0;
+            }
+            
+            var newButtonDom = App.dom.buttonList[newIndex];
+            isPM = newButtonDom.attr('id').split('-')[0] === 'pm';
+            var newName = newButtonDom.find('#data').attr('title');
+            
+            if(isPM){
+                selectPM(newName);
+            }
+            else {
+                selectChannel(newName);
+            }
+            
+        }
     });
 });
