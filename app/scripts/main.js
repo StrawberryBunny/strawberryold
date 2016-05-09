@@ -18,7 +18,8 @@ var App = {
         userlistTitle: null,
         noChannelImage: null,
         mainTextEntry: null,
-        mainTextEntryButton: null
+        mainTextEntryButton: null,
+        buttonList: []
     },
     user: { // Collection for items related to the user.
         account: '',            // String (account name)
@@ -320,6 +321,32 @@ function characterWentOffline(character){
     }
 }
 
+function selectPreviousChannelOrPM(index){
+    if($('#channellist').children().length === 0){
+        // If there are no channels to move to show the no channel stuff.
+        App.dom.noChannelImage.show();
+        App.dom.userlistTopBar.hide();
+        App.state.selectedChannel = '';
+    }
+    else {
+        index -= 1;
+        if(index < 0){
+            index = 0;
+        }
+        
+        var newButton = App.dom.buttonList[index];
+        var isPM = newButton.attr('id').split('-')[0] === 'pm';
+        var title = newButton.find('#data').attr('title');
+        
+        if(isPM){
+            selectPM(title);
+        }
+        else {
+            selectChannel(title);
+        }
+    }
+}
+
 /**
  * Channels ========================================================================================================================
  */
@@ -383,7 +410,7 @@ function openChannel(name){
         throwError('Trying to open a channel that is already open: ' + name); 
         return;
     }
-
+    
     // Is this a public or private channel?
     var isPublic = name.substr(0, 3) !== 'ADH';
 
@@ -408,9 +435,12 @@ function openChannel(name){
         var domButton = createDomChannelButton(isPublic, name, channels[name].title);
         channels[name].buttonDom = domButton;
     }
-
+    
     // Append the dom button to the channel list.
     App.dom.openChannelList.append(channels[name].buttonDom);
+    
+    // Add to array
+    App.dom.buttonList.push(channels[name].buttonDom);
 
     // Add the click listener to the dom button
     channels[name].buttonDom.click(function(){
@@ -456,48 +486,13 @@ function closeChannel(name){
     var isPublic = name.substr(0, 3) !== 'ADH';
     var channels = isPublic ? App.publicChannels : App.privateChannels;
 
-    // Get the index of our button in the list of buttons.
-    var removeIndex = -1;
-    var matchingChannelButtons = $('#channel-' + stripWhitespace(name));
-    for(var i = 0; i < matchingChannelButtons.length; i++){
-        if(matchingChannelButtons.eq(i).attr('title') === name){
-            removeIndex = matchingChannelButtons.eq(i).index();
-            break;
-        }
-    } 
-      
     // Remove doms.
     channels[name].buttonDom.remove();
     channels[name].messageDom.remove();
-    channels[name].userlistDom.remove();
-
+    channels[name].userlistDom.remove();   
+    
     // remove form open channel list
-    App.state.openChannels.splice(removeIndex, 1);
-
-    if($('.channellist').children().length === 0){
-    // If there are no channels to move to show the no channel stuff.
-        App.dom.noChannelImage.show();
-        App.dom.userlistTopBar.hide();
-        App.state.selectedChannel = '';
-    }
-    else {
-        // what channel should we select next?
-        removeIndex -= 1;
-        if(removeIndex < 0) removeIndex = 0;
-
-        // get the button dom
-        var buttonDom = $('.channellist').children().eq(removeIndex);
-        var newChannelName = buttonDom.attr('title'); 
-        var isPM = buttonDom.attr('id').split('-')[0] === 'pm';
-
-        // Select the channel
-        if(isPM){
-            selectPM(newChannelName);
-        }
-        else {
-            selectChannel(newChannelName);
-        }
-    }
+    App.state.openChannels.splice(App.state.openChannels.indexOf(name), 1);
     
     // Unselect this channel's entry in the channel list
     channels[name].listEntry.removeClass('selected');    
@@ -505,6 +500,14 @@ function closeChannel(name){
     // Update this channel's entry in the room list's char count
     var count = parseInt(channels[name].listEntry.find('#charcount').text());
     channels[name].listEntry.find('#charcount').text(count - 1);
+    
+    // Remove button from button list
+    var index = App.dom.buttonList.indexOf(channels[name].buttonDom);
+    App.dom.buttonList.splice(index, 1);
+    
+    // What next?
+    selectPreviousChannelOrPM(index);
+    
 }
 
 function receiveMessage(channel, character, message){
@@ -660,6 +663,9 @@ function openPM(character){
         App.characters[character].pms.buttonDom = domButton;
     }
 
+    // Set the button's futuer index in the list
+    App.characters[character].pms.buttonDom.data('actualindex', App.dom.openChannelList.children().length);
+
     // Append the dom button to the channel list.
     App.dom.openChannelList.append(App.characters[character].pms.buttonDom);
 
@@ -676,33 +682,49 @@ function openPM(character){
 }
 
 function closePM(character){
-    // if this pm isn't open..
+    console.log("closing character: "+ character);
+    
+    // If this channel isn't in the list of open channels.
     if(App.state.openPMs.indexOf(character) === -1){
-       console.log("Error: Trying to close a PM that isn't open.");
+        console.log("Error: Trying to close a PM that isn't open: " +character);
+        console.log(JSON.stringify(App.state.openPMs));
         pushFeedItem('error', 'Tried to close PM for ' + character + ' when it isn\'t open.');
         return;
     }
-    
-    // Get the index of our button in the list of buttons.
-    var removeIndex = -1;
-    var matchingChannelButtons = $('#pm-' + stripWhitespace(name));
-    for(var i = 0; i < matchingChannelButtons.length; i++){
-        if(matchingChannelButtons.eq(i).attr('title') === name){
-            removeIndex = matchingChannelButtons.eq(i).index();
-            break;
-        }
-    } 
 
+    // Get the index of our button in the list of buttons.
+    var removeIndex = App.characters[character].pms.buttonDom.data('actualindex');
+      
     // Remove doms.
     App.characters[character].pms.buttonDom.remove();
     App.characters[character].pms.messageDom.remove();
     //App.characters[character].pms.userlistDom.remove();
+    
+    // Update the actual index of all the other channels
+    console.log('Button ' + removeIndex + ' removed. Updating all children\'s indexs.');
+    $('#channellist').children().each(function(){
+        var curIndex = $(this).data('actualindex');
+        console.log("button: " + $(this).attr('title') + ' actualindex: ' + curIndex);
+        if(curIndex >= removeIndex){
+            var newIndex = curIndex - 1;
+            console.log("setting new index to : " + newIndex);
+            $(this).data('actualindex', newIndex);
+        }
+    });
+    
+    
+    $('#channellist').children().each(function(){
+        var curIndex = $(this).data('actualindex');
+        console.log("index: " + curIndex);
+    });
+    
+    
 
     // remove form open channel list
-    App.state.openPMs.splice(removeIndex, 1);
+    App.state.openPMs.splice(App.state.openPMs.indexOf(character), 1);
 
-    // If there are no channels to move to show the no channel stuff.
-    if($('.channellist').children().length === 0){
+    if($('#channellist').children().length === 0){
+        // If there are no channels to move to show the no channel stuff.
         App.dom.noChannelImage.show();
         App.dom.userlistTopBar.hide();
         App.state.selectedChannel = '';
@@ -712,9 +734,25 @@ function closePM(character){
         removeIndex -= 1;
         if(removeIndex < 0) removeIndex = 0;
 
+        // Figure out what order the channels are in.
+        var cbs = [];
+        $('#channellist').children().each(function(){
+            cbs.push($(this));
+        });
+        cbs.sort(function(a, b){
+            if(a.data('actualindex') < b.data('actualindex')) return -1;
+            if(a.data('actualindex') > b.data('actualindex')) return 1;
+            return 0;
+        });
+        
+        /*for(var i = 0; i < cbs.length; i++){
+            console.log("button: " + cbs[i].attr('title') + ', ' + cbs[i].data('actualindex'));
+        }*/
+        
         // get the button dom
-        var buttonDom = $('.channellist').children().eq(removeIndex);
+        var buttonDom = cbs[removeIndex];               
         var newChannelName = buttonDom.attr('title'); 
+        //console.log('buttonDom: ' + buttonDom + ', ' + buttonDom.attr('id'));
         var isPM = buttonDom.attr('id').split('-')[0] === 'pm';
 
         // Select the channel
@@ -1282,6 +1320,10 @@ function stylizeStatus(status){
     return status;
 }
 
+function arrayMove(array, from, to){
+    array.splice(to, 0, array.splice(from, 1)[0]);
+}
+
 /**
  * JSON Endpoint Helpers ===========================================================================================================
  */
@@ -1572,10 +1614,18 @@ function createDomMain(){
             var domChannels = $('<div class="channels"></div>');
             domChatArea.append(domChannels);
 
-                var domChannelList = $('<div id="channenlist"></div>');
+                var domChannelList = $('<div id="channellist"></div>');
                 domChannels.append(domChannelList);
                 App.dom.openChannelList = domChannelList;
-                domChannelList.sortable();
+                domChannelList.sortable({
+                    start: function(event, ui){
+                        ui.item.data('start', ui.item.index());
+                    },
+                    update: function(event, ui) {
+                        // Move this item.
+                        arrayMove(App.dom.buttonList, ui.item.data('start'), ui.item.index());
+                    }
+                });
 
             var domChannel = $('<div class="channel"></div>');
             domChatArea.append(domChannel);
@@ -2636,6 +2686,7 @@ function servErrorIdentification(){
     $('.loginloadingcontent span').removeClass('fa-spin fa-hand-peace-o');
     $('.loginloadingcontent span').addClass('fa-hand-stop-o');
 }
+
 
 /**
  * Main Entry Point ===================================================================================================================
