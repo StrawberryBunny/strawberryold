@@ -1,5 +1,7 @@
 'use strict';
 
+/* global XBBCODE */
+
 /**
  * App Data ====================================================================================================================
  */
@@ -213,7 +215,7 @@ function sendChatMessage(message, channel){
         for(var i = 0; i < bb.errorQueue.length; i++){
             errorMessage += '[li]' + bb.errorQueue[i] + '[/li]';        
         }
-        errorMessage += '[/ul]'
+        errorMessage += '[/ul]';
         pushFeedItem('error', errorMessage);
         return false;
     }
@@ -245,7 +247,7 @@ function sendPM(message, character){
         for(var i = 0; i < bb.errorQueue.length; i++){
             errorMessage += '[li]' + bb.errorQueue[i] + '[/li]';        
         }
-        errorMessage += '[/ul]'
+        errorMessage += '[/ul]';
         pushFeedItem('error', errorMessage);
         return false;
     }
@@ -272,7 +274,7 @@ function updateStatus(character, status, statusmsg){
     // Update all instances of userentry for this character.
     $('.userentry').each(function(){
         var nameplate = $(this).children('.nameplate');
-        if(nameplate.text() == character){
+        if(nameplate.text() === character){
             var statusimg = $(this).children('.statusimg');
             statusimg.attr('src', 'images/status-small-' + status.toLowerCase() + '.png');
             statusimg.attr('title', stylizeStatus(status));
@@ -283,9 +285,10 @@ function updateStatus(character, status, statusmsg){
 
 function characterWentOffline(character){
     // Remove this user's entry in any channel user lists and remove their userentry from the doms.
+    var removed;
     for(var key in App.publicChannels){
         if(typeof App.publicChannels[key].users !== 'undefined'){
-            var removed = App.publicChannels[key].users.splice(character, 1); 
+            removed = App.publicChannels[key].users.splice(character, 1); 
             if(typeof removed !== 'undefined'){
                 App.publicChannels[key].userlistDom.children('.userentry').each(function(){
                     if($(this).attr('title') === character){
@@ -296,9 +299,9 @@ function characterWentOffline(character){
         }
     }
     
-    for(var key in App.privateChannels){
+    for(key in App.privateChannels){
         if(typeof App.privateChannels[key].users !== 'undefined'){
-            var removed = App.privateChannels[key].users.splice(character, 1); 
+            removed = App.privateChannels[key].users.splice(character, 1); 
             if(typeof removed !== 'undefined'){
                 App.privateChannels[key].userlistDom.children('.userentry').each(function(){
                     if($(this).attr('title') === character){
@@ -464,7 +467,7 @@ function openChannel(name){
     channels[name].listEntry.find('#charcount').text(count + 1);
 
     // If no channel is selected, select this one
-    if(App.state.selectedChannel == ''){
+    if(App.state.selectedChannel === ''){
         selectChannel(name);
     }
 }
@@ -476,7 +479,7 @@ function leaveChannel(name){
 function closeChannel(name){
     // If this channel isn't in the list of open channels.
     if(App.state.openChannels.indexOf(name) === -1){
-        console.log("Error: Trying to close a channel that isn't open: " + name);
+        console.log('Error: Trying to close a channel that isn\'t open: ' + name);
         console.log(JSON.stringify(App.state.openChannels));
         pushFeedItem('error', 'Tried to close channel ' + name + ' when it isn\'t open.');
         return;
@@ -672,7 +675,7 @@ function openPM(character){
     });
         
     // If no channel is selected, select this one
-    if(App.state.selectedChannel == ''){
+    if(App.state.selectedChannel === ''){
         selectPM(character);
     }
 }
@@ -680,7 +683,7 @@ function openPM(character){
 function closePM(character){
     // If this channel isn't in the list of open channels.
     if(App.state.openPMs.indexOf(character) === -1){
-        console.log("Error: Trying to close a PM that isn't open: " +character);
+        console.log('Error: Trying to close a PM that isn\'t open: ' +character);
         console.log(JSON.stringify(App.state.openPMs));
         pushFeedItem('error', 'Tried to close PM for ' + character + ' when it isn\'t open.');
         return;
@@ -747,7 +750,7 @@ function refreshChannels(){
 
 function channelListUpdated(){ // Called from parseServerMessage() when the public & private channel lists has been updated
     // Stop the refresh button spinning
-    App.tools['channels'].refreshbutton.removeClass("fa-spin");
+    App.tools['channels'].refreshbutton.removeClass('fa-spin');
 
     // Clear any existing channel entries
     App.tools['channels'].entryPush.empty();
@@ -765,8 +768,9 @@ function channelListUpdated(){ // Called from parseServerMessage() when the publ
     publicList.sort();
 
     // Create entries for each channel
+    var dom;
     for(var i = 0; i < publicList.length; i++){
-        var dom = createDomChannelListEntry(App.publicChannels[publicList[i]].name, App.publicChannels[publicList[i]].name, App.publicChannels[publicList[i]].characterCount);
+        dom = createDomChannelListEntry(App.publicChannels[publicList[i]].name, App.publicChannels[publicList[i]].name, App.publicChannels[publicList[i]].characterCount);
         App.tools['channels'].entryPush.append(dom);
         App.publicChannels[publicList[i]].listEntry = dom;
         
@@ -777,25 +781,29 @@ function channelListUpdated(){ // Called from parseServerMessage() when the publ
     }
 
     // Add a title seperator for "Private Channels"
-    var sepDom = $('<div class="channellistseperator">Private Channels</div>');
+    sepDom = $('<div class="channellistseperator">Private Channels</div>');
     App.tools['channels'].entryPush.append(sepDom);
 
     var privateList = [];
-    for(var key in App.privateChannels){
+    for(key in App.privateChannels){
         privateList.push([App.privateChannels[key].title, key]);
     }
     privateList.sort(function(a, b){
         var titleA = a[0].toLowerCase();
         var titleB = b[0].toLowerCase();
 
-        if(titleA < titleB) return -1;
-        if(titleA > titleB) return 1;
+        if(titleA < titleB){
+            return -1;
+        }
+        if(titleA > titleB){
+            return 1;
+        }
         return 0;
     });
 
     // Create entires
-    for(var i = 0; i < privateList.length; i++){
-        var dom = createDomChannelListEntry(privateList[i][1], privateList[i][0], App.privateChannels[privateList[i][1]].characterCount);
+    for(i = 0; i < privateList.length; i++){
+        dom = createDomChannelListEntry(privateList[i][1], privateList[i][0], App.privateChannels[privateList[i][1]].characterCount);
         App.tools['channels'].entryPush.append(dom);
         App.privateChannels[privateList[i][1]].listEntry = dom;
         
@@ -817,7 +825,7 @@ function pushFeedItem(type, message){
     App.tools['feed'].queue.push([type, bb.html]);
 
     // If the feed is open, display the message immediately.
-    if(App.state.currentTool == 'feed' && App.tools['feed'].currentlyDisplaying === false){
+    if(App.state.currentTool === 'feed' && App.tools['feed'].currentlyDisplaying === false){
         displayQueuedFeedMessages();
     }
     else {
@@ -846,7 +854,7 @@ function displayQueuedFeedMessages(){
 
 function displayNextFeedMessage(iterate){
     // Check that we actually have a new message
-    if(App.tools['feed'].queue.length == 0){
+    if(App.tools['feed'].queue.length === 0){
         return;
     } 
     
@@ -992,10 +1000,11 @@ function viewerUpdateCharacterInfo(data){
     var container = $('.toolviewerarea');
     
     // Contact details/sites.
+    var list;
     var contactDetails = data.info[1].items;
     if(contactDetails.length > 0){
         container.append('<p><b>Contact Details / Sites</b></p>');
-        var list = '<ul>';
+        list = '<ul>';
         for(var i = 0; i < contactDetails[i].length; i++){
             list += '<li><b>' + contactDetails[i].name + '</b>: ' + contactDetails[i].value + '</li>';
         }
@@ -1007,8 +1016,8 @@ function viewerUpdateCharacterInfo(data){
     var sexualDetails = data.info[2].items;
     if(sexualDetails.length > 0){
         container.append('<p><b>Sexual Details</b></p>');
-        var list = '<ul>';
-        for(var i = 0; i < sexualDetails.length; i++){
+        list = '<ul>';
+        for(i = 0; i < sexualDetails.length; i++){
             list += '<li><b>' + sexualDetails[i].name + '</b>: ' + sexualDetails[i].value + '</li>';
         }
         list += '</ul>';
@@ -1019,8 +1028,8 @@ function viewerUpdateCharacterInfo(data){
     var generalDetails = data.info[3].items;
     if(generalDetails.length > 0){
         container.append('<p><b>General Details</b></p>');
-        var list = '<ul>';
-        for(var i = 0; i < generalDetails.length; i++){
+        list = '<ul>';
+        for(i = 0; i < generalDetails.length; i++){
             list += '<li><b>' + generalDetails[i].name + '</b>: ' + generalDetails[i].value + '</li>';
         }
         list += '</ul>';
@@ -1031,8 +1040,8 @@ function viewerUpdateCharacterInfo(data){
     var rpingPrefs = data.info[5].items;
     if(rpingPrefs.length > 0){
         container.append('<p><b>RPing Preferences</b></p>');
-        var list = '<ul>';
-        for(var i = 0; i < rpingPrefs.length; i++){
+        list = '<ul>';
+        for(i = 0; i < rpingPrefs.length; i++){
             list += '<li><b>' + rpingPrefs[i].name + '</b>: ' + rpingPrefs[i].value + '</li>';
         }
         list += '</ul>';
@@ -1048,7 +1057,7 @@ function viewerUpdatePictures(data){
     for(var i = 0; i < data.images.length; i++){
         var domImage = $('<div class="viewerimage"></div>');
         
-        domImage.append('<a href="' + data.images[i].url + '" target="_blank"><img class="img-responsive" src="' + data.images[i].url + '" title="' + data.images[i].description + '"/></a>')
+        domImage.append('<a href="' + data.images[i].url + '" target="_blank"><img class="img-responsive" src="' + data.images[i].url + '" title="' + data.images[i].description + '"/></a>');
         
         if(data.images[i].description.length > 0){
             domImage.append('<span class="viewerimagedescription">' + data.images[i].description + '</span></div>');
@@ -1062,7 +1071,7 @@ function viewerUpdatePictures(data){
     App.tools['viewer'].buttonBookmark.removeClass('disabled');
     App.tools['viewer'].buttonFriend.removeClass('disabled');
     App.tools['viewer'].buttonMemo.removeClass('disabled');
-    App.tools['viewer'].buttonNote.removeClass('disabled')
+    App.tools['viewer'].buttonNote.removeClass('disabled');
 }
 
 /**
@@ -1076,7 +1085,7 @@ function toolShowStatus(){
 
 function toolShowChannelList(){
     // If we don't already have a channel list, fetch one automatically
-    if(App.tools['channels'].entryPush.children().length == 0){
+    if(App.tools['channels'].entryPush.children().length === 0){
         refreshChannels();
     }
 }
@@ -1178,11 +1187,13 @@ function isCharacterBookmarked(character){
 function isCharacterOurFriend(character, allCharacters){
     if(allCharacters){
         for(var key in App.user.friendsList){
-            if(App.user.friendsList[key].indexOf(character) !== -1) return true;
+            if(App.user.friendsList[key].indexOf(character) !== -1){
+                return true;
+            }
         }        
     }
     else if(App.user.friendsList[App.user.loggedInAs].indexOf(character) !== -1){
-         return true
+         return true;
     }   
     
     return false;
@@ -1244,12 +1255,12 @@ function numberEnding (number) {
 
 
 function stripWhitespace(str){
-	return str.replace(/ /g,'').replace(/[^\w\s]/gi, '');
+	return str.replace(/ /g, '').replace(/[^\w\s]/gi, '');
 }
 
 function stylizeStatus(status){
     status = status.toLowerCase();
-    if(status == 'dnd'){
+    if(status === 'dnd'){
         status = 'DND';
     }
     else {
@@ -1303,7 +1314,7 @@ function postForFriendsList(){
 			for(var i = 0; i < friends.length; i++){
 				var source = friends[i].source;
 				var dest = friends[i].dest;
-				if(typeof App.user.friendsList[source] == 'undefined'){
+				if(typeof App.user.friendsList[source] === 'undefined'){
 					App.user.friendsList[source] = [];
 				}
 				App.user.friendsList[source].push(dest);
@@ -1328,7 +1339,7 @@ function postForBookmarks(){
             App.state.logInReadyInfo.bookmarksRetrieved = true;
             
             $('#loadingtext').text('Bookmarks received.');
-            $('#loadingtext2').text('Waiting for full user list to download... ' + App.state.logInReadyInfo.listedCharacters + " / " + App.state.logInReadyInfo.initialCharacterCount);
+            $('#loadingtext2').text('Waiting for full user list to download... ' + App.state.logInReadyInfo.listedCharacters + ' / ' + App.state.logInReadyInfo.initialCharacterCount);
             
             // Log in process complete (except for full user list)
             checkForReadyStatus();                       
@@ -1394,9 +1405,10 @@ function postForSetMemo(characterID, note){
             $('#memosend').prop('disabled', false);
             
             // Error check
+            var prog;
             if(data.error.length > 0){
                 // Oh dear.
-                var prog = $('#memoprogress');
+                prog = $('#memoprogress');
                 prog.removeClass();
                 prog.addClass('fa fa-times');
                 prog.show();  
@@ -1406,7 +1418,7 @@ function postForSetMemo(characterID, note){
             }
             else {
                 // Change the progress to show the result.
-                var prog = $('#memoprogress');
+                prog = $('#memoprogress');
                 prog.removeClass();
                 prog.addClass('fa fa-check');
                 prog.show();  
@@ -1607,11 +1619,11 @@ function createDomMain(){
             domMainInput.append(domTextArea);
             App.dom.mainTextEntry = domTextArea;
             domTextArea.on('keypress', function(e){
-                if(e.which == 13 && !e.shiftKey){
+                if(e.which === 13 && !e.shiftKey){
                     e.preventDefault();
                     var result = sendChatMessageToActiveWindow(App.dom.mainTextEntry.val());
                     if(result){
-                        App.dom.mainTextEntry.val("");
+                        App.dom.mainTextEntry.val('');
                     }
                 }
             });
@@ -1626,7 +1638,7 @@ function createDomMain(){
                 e.preventDefault();
                 var result = sendChatMessageToActiveWindow(App.dom.mainTextEntry.val());
                 if(result){
-                    App.dom.mainTextEntry.val("");
+                    App.dom.mainTextEntry.val('');
                 }
             });
 
@@ -1641,7 +1653,7 @@ function createUserListCloseButtonClickCallback(){
         else {
             closePM(App.state.selectedPM);
         }
-    }
+    };
 }
 
 function createDomMainMenu(){
@@ -1791,19 +1803,19 @@ function createDomChannelListEntry(channelName, channelTitle, characterCount){
     var domCharCount = $('<span id="charcount">' + characterCount + '</span>');
     domContainer.append(domCharCount);
 
-    var domHidden = $('<span id="data" title="' + channelName + '" style="display: none;"></span>')
+    var domHidden = $('<span id="data" title="' + channelName + '" style="display: none;"></span>');
     domContainer.append(domHidden);
 
     domContainer.click(function(){
         // Get the hidden data.
-        var channelName = $(this).find("#data").attr('title');
+        var chanName = $(this).find('#data').attr('title');
         
         // Is this channel open already?
-        if(App.state.openChannels.indexOf(channelName) === -1){
-            joinChannel(channelName);
+        if(App.state.openChannels.indexOf(chanName) === -1){
+            joinChannel(chanName);
         }
         else {
-            leaveChannel(channelName);
+            leaveChannel(chanName);
         }
     });
 
@@ -1834,7 +1846,7 @@ function createDomToolFeed(){
     domOtherButtons.append(btnTrashAll);
     btnTrashAll.click(function(){
         App.tools['feed'].currentlyDisplaying = false;
-        App.tools['feed'].counter.text.text("");
+        App.tools['feed'].counter.text.text('');
         App.tools['feed'].counter.text.fadeOut();
         App.tools['feed'].counter.image.fadeOut();
         App.tools['feed'].queue = [];
@@ -1883,7 +1895,7 @@ function createDomToolFeedMessage(type, message){
     var btnClose = $('<span class="famuted fa fa-times"></div>');
     topBar.append(btnClose);
     btnClose.click(function(){
-        $(this).parent().parent().slideUp("slow", function(){
+        $(this).parent().parent().slideUp('slow', function(){
             $(this).remove();
         });
     });
@@ -1923,14 +1935,14 @@ function createDomToolViewer(){
         window.open('https://www.f-list.net/read_notes.php?send=' + escapeHtml(App.tools['viewer'].target), '_blank');        
     });
     
-    var btnMemo = $('<span class="faicon fa fa-sticky-note" title="View/Edit Memo"></span>')
+    var btnMemo = $('<span class="faicon fa fa-sticky-note" title="View/Edit Memo"></span>');
     domTitleBar.append(btnMemo);
     App.tools['viewer'].buttonMemo = btnMemo;
     btnMemo.click(function(){
         // If this button isn't disbaled.
         if(!$(this).hasClass('disabled')){
             // If the memo container doesn't already exist
-            if($('.toolviewerarea').find('.memocontainer').length == 0){
+            if($('.toolviewerarea').find('.memocontainer').length === 0){
                 // Post for the memo
                 postForGetMemo(App.tools['viewer'].target);
                 
@@ -2059,7 +2071,7 @@ function createDomFriendsListContents(){
     order.sort();
     
     // Add the logged in character's friends first.
-    if(typeof App.user.friendsList[App.user.loggedInAs] !== 'undefined'){
+    if(typeof App.user.friendsList[App.user.loggedInAs] !== 'undefined'){ // Ensure the logged in character actually has some friends.
         for(var i = 0; i < App.user.friendsList[App.user.loggedInAs].length; i++){
             var dom = createDomFriendsListEntry(App.user.loggedInAs, App.user.friendsList[App.user.loggedInAs][i]);
             App.tools['friends'].scrollerContent.append(dom);
@@ -2069,17 +2081,16 @@ function createDomFriendsListContents(){
             });
         }
     }
-    else {}
 }
 
 function createDomFriendsListEntry(sourceName, friendName){
     var escapedSourceName = escapeHtml(sourceName).toLowerCase();
     var escapedFriendName = escapeHtml(friendName).toLowerCase();
     
-    var stat = "Offline";
-    var statusmsg = "";
+    var stat = 'Offline';
+    var statusmsg = '';
     
-    if(typeof App.characters[friendName] != 'undefined'){
+    if(typeof App.characters[friendName] !== 'undefined'){
         stat = App.characters[friendName].status;
         statusmsg = App.characters[friendName].statusmsg;
     }
@@ -2091,11 +2102,11 @@ function createDomFriendsListEntry(sourceName, friendName){
     var domAvatar = $('<div class="friendentryavatar"></div>');
     domContainer.append(domAvatar);
     
-    var domAvatarUnderImage = $('<img class="avatarunderimage img-rounded" src="https://static.f-list.net/images/avatar/' + escapedFriendName + '.png" title="' + friendName + '"/>')
+    var domAvatarUnderImage = $('<img class="avatarunderimage img-rounded" src="https://static.f-list.net/images/avatar/' + escapedFriendName + '.png" title="' + friendName + '"/>');
     domAvatar.append(domAvatarUnderImage);
     var domAvatarOverStatus = $('<img class="avataroverstatus" src="images/status-large-' + stat + '.png" title="' + stat + '"/>');
     domAvatar.append(domAvatarOverStatus);
-    var domAvatarSourceThumb = $('<img class="avatarsourcethumb img-circle" src="https://static.f-list.net/images/avatar/' + escapedSourceName + '.png" title="' + sourceName + '"/>')
+    var domAvatarSourceThumb = $('<img class="avatarsourcethumb img-circle" src="https://static.f-list.net/images/avatar/' + escapedSourceName + '.png" title="' + sourceName + '"/>');
     domAvatar.append(domAvatarSourceThumb);
     
     // Text    
@@ -2141,7 +2152,7 @@ function createDomToolInfo(){
     var domChangeLog = $('<div class="changelogcontainer"></div>');
     domScrollerContents.append(domChangeLog);
     
-    domChangeLog.append('<h3><b>Changelog</b></h3>')
+    domChangeLog.append('<h3><b>Changelog</b></h3>');
     for(var i = App.changelog.length - 1; i >= 0; i--){
         var dom = $('<div class="changelogentry"></div>');
         
@@ -2151,7 +2162,7 @@ function createDomToolInfo(){
             html += '<li>' + XBBCODE.process({ text: App.changelog[i][1][j] }).html + '</li>';
         }
                 
-        html += '</ul>'
+        html += '</ul>';
         
         dom.html(html);
         
@@ -2191,7 +2202,7 @@ function createDomUserEntry(name, gender, status, statusmsg){
     var domContainer = $('<div class="userentry" title="' + name + '"></div>');
 
     var genderColour = '#444444';
-    if(name != 'Description'){
+    if(name !== 'Description'){
         var domImg = $('<img class="statusimg" src="images/status-small-' + status.toLowerCase() + '.png" title="' + status + '"/>');
         domContainer.append(domImg);
         genderColour = App.options.genderColours[App.characters[name].gender.toLowerCase()];
@@ -2206,7 +2217,7 @@ function createDomMessage(character, message){
     var domContainer = $('<div class="message"></div>');
     
     var finalMessage = '';
-    if(character.toLowerCase() != 'description'){
+    if(character.toLowerCase() !== 'description'){
         var gender = App.characters[character].gender;
         var status = App.characters[character].status;
         var statusmsg = App.characters[character].statusmsg;
@@ -2302,7 +2313,7 @@ function parseServerMessage(message){
             // A channel's description has changed. (Also sent in response to JCH)
             var isPublic = obj.channel.substr(0, 3) !== 'ADH';
             var channels = isPublic ? App.publicChannels : App.privateChannels;
-            var showNewDescription = typeof channels[obj.channel].description === 'undefined' || channels[obj.channel].description != obj.description;
+            var showNewDescription = typeof channels[obj.channel].description === 'undefined' || channels[obj.channel].description !== obj.description;
             if(showNewDescription){            
                 receiveMessage(obj.channel, 'Description', obj.description);
             }
