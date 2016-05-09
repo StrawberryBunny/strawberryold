@@ -654,20 +654,16 @@ function openPM(character){
         App.characters[character].pms.messageDom = domMessages;
     }
 
-    /*if(typeof channels[name].userlistDom === 'undefined'){
-        
-    }*/
-
     if(typeof App.characters[character].pms.buttonDom === 'undefined'){
         var domButton = createDomPMButton(character);
         App.characters[character].pms.buttonDom = domButton;
     }
 
-    // Set the button's futuer index in the list
-    App.characters[character].pms.buttonDom.data('actualindex', App.dom.openChannelList.children().length);
-
     // Append the dom button to the channel list.
     App.dom.openChannelList.append(App.characters[character].pms.buttonDom);
+    
+    // Add to array
+    App.dom.buttonList.push(App.characters[character].pms.buttonDom);
 
     // Add the click listener to the dom button
     App.characters[character].pms.buttonDom.click(function(){
@@ -682,8 +678,6 @@ function openPM(character){
 }
 
 function closePM(character){
-    console.log("closing character: "+ character);
-    
     // If this channel isn't in the list of open channels.
     if(App.state.openPMs.indexOf(character) === -1){
         console.log("Error: Trying to close a PM that isn't open: " +character);
@@ -692,77 +686,21 @@ function closePM(character){
         return;
     }
 
-    // Get the index of our button in the list of buttons.
-    var removeIndex = App.characters[character].pms.buttonDom.data('actualindex');
-      
+          
     // Remove doms.
     App.characters[character].pms.buttonDom.remove();
     App.characters[character].pms.messageDom.remove();
     //App.characters[character].pms.userlistDom.remove();
     
-    // Update the actual index of all the other channels
-    console.log('Button ' + removeIndex + ' removed. Updating all children\'s indexs.');
-    $('#channellist').children().each(function(){
-        var curIndex = $(this).data('actualindex');
-        console.log("button: " + $(this).attr('title') + ' actualindex: ' + curIndex);
-        if(curIndex >= removeIndex){
-            var newIndex = curIndex - 1;
-            console.log("setting new index to : " + newIndex);
-            $(this).data('actualindex', newIndex);
-        }
-    });
-    
-    
-    $('#channellist').children().each(function(){
-        var curIndex = $(this).data('actualindex');
-        console.log("index: " + curIndex);
-    });
-    
-    
-
-    // remove form open channel list
+    // Remove from open pm list
     App.state.openPMs.splice(App.state.openPMs.indexOf(character), 1);
-
-    if($('#channellist').children().length === 0){
-        // If there are no channels to move to show the no channel stuff.
-        App.dom.noChannelImage.show();
-        App.dom.userlistTopBar.hide();
-        App.state.selectedChannel = '';
-    }
-    else {
-        // what channel should we select next?
-        removeIndex -= 1;
-        if(removeIndex < 0) removeIndex = 0;
-
-        // Figure out what order the channels are in.
-        var cbs = [];
-        $('#channellist').children().each(function(){
-            cbs.push($(this));
-        });
-        cbs.sort(function(a, b){
-            if(a.data('actualindex') < b.data('actualindex')) return -1;
-            if(a.data('actualindex') > b.data('actualindex')) return 1;
-            return 0;
-        });
-        
-        /*for(var i = 0; i < cbs.length; i++){
-            console.log("button: " + cbs[i].attr('title') + ', ' + cbs[i].data('actualindex'));
-        }*/
-        
-        // get the button dom
-        var buttonDom = cbs[removeIndex];               
-        var newChannelName = buttonDom.attr('title'); 
-        //console.log('buttonDom: ' + buttonDom + ', ' + buttonDom.attr('id'));
-        var isPM = buttonDom.attr('id').split('-')[0] === 'pm';
-
-        // Select the channel
-        if(isPM){
-            selectPM(newChannelName);
-        }
-        else {
-            selectChannel(newChannelName);
-        }
-    }
+    
+    // remove button from button list.
+    var index = App.dom.buttonList.indexOf(App.characters[character].pms.buttonDom);
+    App.dom.buttonList.splice(index, 1);
+    
+    // What Next?
+    selectPreviousChannelOrPM(index);
 }
 
 function turnOffSelectedPM(){
