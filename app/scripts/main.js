@@ -6,6 +6,11 @@
  * App Data ====================================================================================================================
  */
 
+var mouseOverChannelButtons = false;
+var channelScrollingInterval;
+var curBottomMargin = 0;
+var channelMouseDistance = 0.5;
+
 var App = {
     connection: null, // The WebSocket connection
     characters: {},
@@ -122,7 +127,8 @@ var App = {
             info:       { name: 'info',         title: 'Info',              icon: 'fa-question',                show: 'toolShowInfo' },
             settings:   { name: 'settings',     title: 'Settings',          icon: 'fa-gears',                   show: 'toolShowSettings' },
             logout:     { name: 'logout',       title: 'Logout',            icon: 'fa-sign-out',                show: 'toolShowLogout' }
-        }
+        },
+        HOVER_SCROLL_SPEED: 25
     },
     serverVars: {
         chat_max: -1,
@@ -1551,6 +1557,8 @@ function createDomMainChat(){
     createDomToolFriendsList();
     createDomToolInfo();
 
+    
+
     // ret
     return domChatContainer;
 }
@@ -1563,10 +1571,13 @@ function createDomMain(){
 
             var domChannels = $('<div class="channels"></div>');
             domChatArea.append(domChannels);
-
+            
+            
                 var domChannelList = $('<div id="channellist"></div>');
                 domChannels.append(domChannelList);
                 App.dom.openChannelList = domChannelList;
+                
+                // Make channel list sortable.
                 domChannelList.sortable({
                     start: function(event, ui){
                         ui.item.data('start', ui.item.index());
@@ -1576,6 +1587,51 @@ function createDomMain(){
                         arrayMove(App.dom.buttonList, ui.item.data('start'), ui.item.index());
                     }
                 });
+                
+                
+                // Make open channel list scrollable
+                domChannels.mouseenter(function(e){
+                   // Start listening for mouse move events
+                    domChannels.on('mousemove', function(e){
+                        // Caclulate the distance down the channel list
+                        var parentOffset = domChannels.parent().offset();
+                        channelMouseDistance = (e.pageY - parentOffset.top) / domChannels.height();					
+                    });
+                    mouseOverChannelButtons = true;
+                    channelScrollingInterval = setInterval(function(){
+                        var chanList = domChannelList;
+                        if(chanList.height() > domChannels.height()){
+                            if(channelMouseDistance < 0.1){
+                                var val = 1 - (channelMouseDistance / 0.1);
+                                var amount = App.consts.HOVER_SCROLL_SPEED * val;
+                                curBottomMargin += amount;					
+                            }
+                            else if(channelMouseDistance > 0.9) {
+                                var val = (channelMouseDistance - 0.9) / 0.1;
+                                var amount = App.consts.HOVER_SCROLL_SPEED * val;
+                                curBottomMargin -= amount;					
+                            }
+                            
+                            // Limit				
+                            if(curBottomMargin > 0){
+                                curBottomMargin = 0;
+                            }
+                            else if(curBottomMargin < domChannels.height() - chanList.height()){
+                                curBottomMargin = domChannels.height() - chanList.height();
+                            }
+                            chanList.css('margin-top', curBottomMargin);
+                        }		
+                    }, 50);
+                });
+                domChannels.mouseleave(function(e){
+                    // Stop listening for mouse move events
+                    domChannels.off('mousemove');
+                    // Kill interval
+                    clearInterval(channelScrollingInterval);
+                });
+                
+                
+                
 
             var domChannel = $('<div class="channel"></div>');
             domChatArea.append(domChannel);
