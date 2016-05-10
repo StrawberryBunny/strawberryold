@@ -474,6 +474,8 @@ function updateStatus(character, status, statusmsg){
     // If us
     if(character === App.user.loggedInAs){
         pushFeedItem('info', 'Your status has been updated successfully.');
+        App.tools['status'].progressIcon.removeClass();
+        App.tools['status'].progressIcon.addClass('fa fa-check');
     }
     
     // Update all instances of userentry for this character.
@@ -521,11 +523,17 @@ function characterWentOffline(character){
     updateStatus(character, 'offline', '');    
     
     // Was this character our friend or bookmark?
-    if(App.user.friendsList[App.user.loggedInAs].indexOf(character) !== -1){
-        pushFeedItem('friendinfo', 'Your friend ' + character + ' has gone offline.', false, true);
+    var shout = false;
+    if(typeof App.user.friendsList[App.user.loggedInAs] !== 'undefined'){
+        if(App.user.friendsList[App.user.loggedInAs].indexOf(character) !== -1){
+            pushFeedItem('friendinfo', 'Your friend ' + character + ' has gone offline.', false, true);
+            shout = true;
+        }
     }
-    else if(App.user.bookmarks.indexOf(character) !== -1){
-        pushFeedItem('bookmarkinfo', 'Your bookmark ' + character + ' has gone offline.', false, true);
+    if(!shout && typeof App.user.bookmarks !== 'undefined'){
+        if(App.user.bookmarks.indexOf(character) !== -1){
+            pushFeedItem('bookmarkinfo', 'Your bookmark ' + character + ' has gone offline.', false, true);
+        }
     }
 }
 
@@ -946,8 +954,11 @@ function receivePM(character, message, sender){
 
 /* Status */
 function updateStatusForm(){
-    App.tools['status'].dropdown.value = App.characters[App.user.loggedInAs].status;
-    App.tools['status'].textarea.value = App.characters[App.user.loggedInAs].statusmsg;
+    App.tools['status'].dropdown.val(App.characters[App.user.loggedInAs].status.toLowerCase());
+    App.tools['status'].textarea.val(App.characters[App.user.loggedInAs].statusmsg);
+    App.tools['status'].progressIcon.removeClass();
+    App.tools['status'].progressIcon.addClass('fa fa-check');
+    App.tools['status'].progressIcon.fadeIn();
 }
 
 /* Channel List */
@@ -2001,9 +2012,15 @@ function createDomToolStatus(){
 
     var domDropDown = $('<select id="statusdd" name="status"><option value="online">Online</option><option value="looking">Looking</option><option value="busy">Busy</option><option value="away">Away</option><option value="dnd">DND</option></select>');
     domFormContainer.append(domDropDown);
+    domDropDown.on('change', function(e){
+        App.tools['status'].progressIcon.fadeOut();
+    });
 
     var domTextArea = $('<textarea id="statusmessage"></textarea>');
     domFormContainer.append(domTextArea);
+    domTextArea.on('keydown', function(e){
+        App.tools['status'].progressIcon.fadeOut();
+    });
 
     // Append
     App.tools['status'].content.append(domContent);
@@ -2017,12 +2034,20 @@ function createDomToolStatus(){
     btnReset.click(function(){
         updateStatusForm();
     });
-
+    
+    var domCont = $('<div></div>');
+    var domInProgressConfirm = $('<span id="statusprogress" class="fa fa-spinner fa-spin"></span>');
+    domCont.append(domInProgressConfirm);
     var btnUpdate = $('<button id="btnstatusupdate" type="submit" class="btn btn-default">Update</button>');
-    botContent.append(btnUpdate);
+    domCont.append(btnUpdate);
     btnUpdate.click(function(){
         // Send Message
         sendMessageToServer('STA { "status": "' + App.tools['status'].dropdown.val() + '", "statusmsg": "' + App.tools['status'].textarea.val() + '" }');
+
+        // Show progress spinner.
+        App.tools['status'].progressIcon.removeClass();
+        App.tools['status'].progressIcon.addClass('fa fa-spinner fa-spin');
+        App.tools['status'].progressIcon.show();
 
         // Disable Update button
         App.tools['status'].updatebutton.addClass('disabled');
@@ -2032,11 +2057,14 @@ function createDomToolStatus(){
             App.tools['status'].updatebutton.removeClass('disabled');
         }, 5000);
     });
+    
+    botContent.append(domCont);
 
     // store
     App.tools['status'].dropdown = domDropDown;
     App.tools['status'].textarea = domTextArea;
     App.tools['status'].updatebutton = btnUpdate;
+    App.tools['status'].progressIcon = domInProgressConfirm;
 }
 
 function createDomToolChannelList(){
@@ -2542,7 +2570,7 @@ function openWebSocket(account, ticket, characterName){
 
     App.connection.onerror = function(error){
         // TODO (Do we need to take action?)
-        console.log('WebSocket error: ' + error);
+        console.log('WebSocket error: ' + JSON.stringify(error));
         pushFeedItem('error', 'WebSocket error: ' + error, true);
     };
 
@@ -2554,7 +2582,13 @@ function openWebSocket(account, ticket, characterName){
         var msg = 'WebSocket closed with code: ' + e.code + ', reason: ' + e.reason + ', wasClean: ' + e.wasClean;
         console.log(msg);
         pushFeedItem('error', msg, true);
-        // TODO (Do we need to take action?)
+        
+        startAgain();
+        var alertDom = createDomAlert(msg);
+        $('.loginalert').append(alertDom);
+        alertDom.delay(5000).fadeOut(2000, function(){
+            $(this).remove();
+        });
     };
 }
 
@@ -2567,7 +2601,7 @@ function parseServerMessage(message){
         var obj = JSON.parse(message.substr(3));
     }
 
-    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'ORS', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'NLN', 'JCH', 'LCH', 'ERR', 'FLN', 'LIS', 'PRI'];
+    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'ORS', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'NLN', 'JCH', 'LCH', 'ERR', 'FLN', 'PRI'];
     if(dontLog.indexOf(tag) === -1){
         console.log(message);
     }
@@ -2827,11 +2861,11 @@ function parseServerMessage(message){
             // Was this character our friend or bookmark?
             
             if(obj.identity !== App.user.loggedInAs){
-                if(App.user.friendsList[App.user.loggedInAs].indexOf(character) !== -1){
-                    pushFeedItem('friendinfo', 'Your friend ' + character + ' has come online.', false, true);
+                if(App.user.friendsList[App.user.loggedInAs].indexOf(obj.identity) !== -1){
+                    pushFeedItem('friendinfo', 'Your friend ' + obj.identity + ' has come online.', false, true);
                 }
-                else if(App.user.bookmarks.indexOf(character) !== -1){
-                    pushFeedItem('bookmarkinfo', 'Your bookmark ' + character + ' has come online.', false, true);
+                else if(App.user.bookmarks.indexOf(obj.identity) !== -1){
+                    pushFeedItem('bookmarkinfo', 'Your bookmark ' + obj.identity + ' has come online.', false, true);
                 }
             }
             
@@ -2948,6 +2982,73 @@ function servErrorIdentification(){
     // Stop the spinning peace hand and replcae with static stop hand.
     $('.loginloadingcontent span').removeClass('fa-spin fa-hand-peace-o');
     $('.loginloadingcontent span').addClass('fa-hand-stop-o');
+}
+
+/** 
+ * Resetting ========================================================================================================================
+ */
+
+function resetAll(){
+    // State
+    App.state.currentTool = '';
+    App.state.openChannels = [];
+    App.state.openPMs = [];
+    App.state.selectedChannel = '';
+    App.state.selectedPM = '';
+    App.state.logInReadyInfo.ready = false;
+    App.state.logInReadyInfo.identified = false;
+    App.state.logInReadyInfo.initialCharacterCount = -1;
+    App.state.logInReadyInfo.listedCharacters = 0;
+    App.state.logInReadyInfo.listComplete = false;
+    App.state.logInReadyInfo.serverInfoRetrieved = false;
+    App.state.logInReadyInfo.friendsListRetrieved = false;
+    App.state.logInReadyInfo.bookmarksRetrieved = false;
+    
+    // Users
+    App.user.account = '';
+    App.user.ticket = '';
+    App.user.characters = [];
+    App.user.loggedInAs = '';
+    App.user.ignoreList = [];
+    App.user.friendList = {};
+    App.user.bookmarks = [];
+    
+    // Tools
+    App.tools.status.dropdown = null;
+    App.tools.status.textarea = null;
+    App.tools.status.updatebutton = null;
+    App.tools.channels.entryPush = null;
+    App.tools.channels.refreshButton = null;
+    App.tools.channels.channelEntries = [];
+    App.tools.feed.currentlyDisplaying = false;
+    App.tools.feed.scroller = null;
+    App.tools.feed.messagePush = null;
+    App.tools.feed.queue = [];
+    App.tools.feed.filterPMs = null;
+    App.tools.feed.filterMentions = null;
+    App.tools.feed.filterAlerts = null;
+    App.tools.viewer.target = '';
+    
+    // Dom
+    App.dom.openChannelList = null;
+    App.dom.channelContents = null;
+    App.dom.userlist = null;
+    App.dom.userlistTopBar = null;
+    App.dom.userlistTitle = null;
+    App.dom.nochannelImage = null;
+    App.dom.mainTextEntry = null;
+    App.dom.mainTextEntry = null;
+    App.dom.buttonList = [];
+    clearInterval(App.dom.channelListScrolling.channelScrollingInterval);
+    App.dom.channelListScrolling.channelScrollingInterval = null;
+    App.dom.channelListScrolling.curBottomMargin = 0;
+    App.dom.channelListScrolling.channelMouseDistance = 0.5;
+}
+
+function startAgain(){
+    $('body').empty();
+    resetAll();
+    $('body').append(createDomLogin());
 }
 
 

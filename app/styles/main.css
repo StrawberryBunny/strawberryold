@@ -389,6 +389,19 @@ html, body {
     margin-top: 10px;
     display: flex;
     justify-content: space-between;
+    width: 100%;
+}
+
+#toolstatuscontentbottom div {
+    display: flex;
+    align-items: center;
+}
+
+#toolstatuscontentbottom span {
+    color: #aaaaaa;
+    margin-right: 10px;
+    font-size: 24px;
+    display: none;
 }
 
 /* Tool - ChannelList */
