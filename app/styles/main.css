@@ -403,6 +403,18 @@ html, body {
     white-space: pre-wrap;
 }
 
+.fpm textarea {
+    width: 100%;
+    height: 180px;
+    resize: none;
+    margin-top: 10px;
+}
+
+.fpm .btn {
+    width: 100%;
+    margin-bottom: 5px;
+}
+
 
 
 

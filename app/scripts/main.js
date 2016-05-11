@@ -966,15 +966,6 @@ function receivePM(character, message, sender){
  * Tool Actions =====================================================================================================================
  */
 
-/* Status */
-function updateStatusForm(){
-    //App.tools['status'].dropdown.val(App.characters[App.user.loggedInAs].status.toLowerCase());
-    //App.tools['status'].textarea.val(App.characters[App.user.loggedInAs].statusmsg);
-    //App.tools['status'].progressIcon.removeClass();
-    //App.tools['status'].progressIcon.addClass('fa fa-check');
-    //App.tools['status'].progressIcon.fadeIn();
-}
-
 /* Channel List */
 function refreshChannels(){
     // Start the refesh button spinning
@@ -1317,8 +1308,7 @@ function viewerUpdatePictures(data){
  * Fired from toggleTool(*) but only if the user clicked on a button to initiate it.
  */
 function toolShowStatus(){
-    // Update the form to match our currently maintained status.
-    updateStatusForm();
+    
 }
 
 function toolShowChannelList(){
@@ -2238,10 +2228,9 @@ function createDomToolFeedMessage(type, message, sender){
         var domRBTwo = $('<div class="feedpmsbuttonstretch"></div>');
         domRightButtons.append(domRBTwo);
         
-        var domBtnClose = $('<span class="faicon fa fa-times"></span>');
+        var domBtnClose = $('<span class="faicon fa fa-times" title="Close Message"></span>');
         domRBTwo.append(domBtnClose);
         domBtnClose.click(function(){
-            console.log("height: " + $(this).closest('.feedmessage').height());
             $(this).closest('.feedmessage').slideUp('slow', function(){
                 $(this).remove();
             });
@@ -2249,6 +2238,14 @@ function createDomToolFeedMessage(type, message, sender){
         
         var domBtnReply = $('<span class="faicon fa fa-reply"></span>');
         domRBTwo.append(domBtnReply);
+        domBtnReply.click(function(){
+            // Append the reply box
+            var domReply = $('<div><textarea id="replytextarea"></textarea><button class="btn btn-default">Send</button></div>');
+            $(this).closest('.fpm').append(domReply);
+            $(this).fadeOut();
+            domReply.hide();
+            domReply.slideDown();
+        });
         
         
         // Extra classes
