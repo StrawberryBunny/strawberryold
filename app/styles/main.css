@@ -332,9 +332,9 @@ html, body {
 
 .feedmessage {
     padding-left: 10px;
-    padding-right: 10px;
+    padding-right: 5px;
     padding-top: 5px;
-    padding-bottom: 5px;
+    padding-bottom: 10px;
     margin-bottom: 5px;
     background-color: #333333;
 }
@@ -353,11 +353,17 @@ html, body {
     font-size: 24px;
 }
 
-.error {
+.feedtitle {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.ferror {
     background-color: #602c2e;
 }
 
-.error .feedtitle {
+.ferror .feedtitle {
     color: #ea4933;
 }
 
@@ -366,8 +372,9 @@ html, body {
     display: block;
 }
 
-.feedpmcontainer {
+.feedcontainer {
     display: inline-table;
+    width: 100%;
 }
 
 .feedpmbuttons {
@@ -387,7 +394,7 @@ html, body {
     justify-content: space-between;
 }
 
-.feedpmcontainer .avatar {
+.feedcontainer .avatar {
     float: left;
     width: 100px;
     height: 100px;
@@ -395,7 +402,7 @@ html, body {
     margin-bottom: 5px;
 }
 
-.feedpmcontainer .userentry {
+.feedcontainer .userentry {
     display: inline-flex;
 }
 

@@ -71,9 +71,12 @@ var App = {
             scroller: null,
             messagePush: null,
             queue: [],
-            filterPMs: null,
-            filterMentions: null,
-            filterAlerts: null
+            filterInfo: false,
+            filterPMs: false,
+            filterFriendActivity: false,
+            filterBookmarkActivity: false,
+            filterMentions: false,
+            filterErrors: false,
         },
         viewer: {
             target: ''
@@ -1129,6 +1132,13 @@ function displayNextFeedMessage(iterate){
     else {
         App.tools['feed'].currentlyDisplaying = false;
     }
+    
+    // Should this message be filtered out?
+    var type = feedEntry[0];
+    if((type === 'pm' && App.tools['feed'].filterPMs) || (type === 'info' && App.tools['feed'].filterInfo) || (type === 'friendinfo' && App.tools['feed'].filterFriendActivity) || 
+        (type === 'bookmarkinfo' && App.tools['feed'].filterBookmarkActivity) || (type === 'error' && App.tools['feed'].filterErrors) || (type === 'mention' && App.tools['feed'].filterMentions)){
+        domMsg.delay(2000).slideUp();
+    }
 }
 
 function createNextFeedMessageTimeoutCallback(iterate){
@@ -2139,14 +2149,155 @@ function createDomToolFeed(){
     var domOtherButtons = $('<div class="feedotherbuttons"></div>');
     domTitleBar.append(domOtherButtons);
     
-    var btnFilterPM = $('<span class="faicon fa fa-comments" title="Turn off PMs"></span>');
+    var btnFilterInfo = $('<span class="faicon fa fa-info-circle" title="Hide Info"></span>');
+    domMainButtons.append(btnFilterInfo);
+    btnFilterInfo.click(function(){
+        if($(this).hasClass('fa-info-circle')){
+            $(this).removeClass('fa-info-circle');
+            $(this).addClass('fa-circle-o');
+            $(this).attr('title', 'Show Info');
+            // Loop through pms and hide any that are pms.
+            $('.toolfeedmessages').children('.finfo').each(function(e){
+                $(this).slideUp();            
+            });
+            App.tools['feed'].filterInfo = true;
+        }
+        else {
+            $(this).removeClass('fa-circle-o');
+            $(this).addClass('fa-info-circle');
+            $(this).attr('title', 'Hide Info');
+            // Loop through pms and hide any that are pms.
+            $('.toolfeedmessages').children('.finfo').each(function(e){
+                $(this).slideDown();            
+            });
+            App.tools['feed'].filterInfo = false;
+        }
+    });
+    
+    var btnFilterPM = $('<span class="faicon fa fa-comments" title="Hide PMs"></span>');
     domMainButtons.append(btnFilterPM);
+    btnFilterPM.click(function(){
+        if($(this).hasClass('fa-comments')){
+            $(this).removeClass('fa-comments');
+            $(this).addClass('fa-comments-o');
+            $(this).attr('title', 'Show PMs');
+            // Loop through pms and hide any that are pms.
+            $('.toolfeedmessages').children('.fpm').each(function(e){
+                $(this).slideUp();            
+            });
+            App.tools['feed'].filterPMs = true;
+        }
+        else {
+            $(this).removeClass('fa-comments-o');
+            $(this).addClass('fa-comments');
+            $(this).attr('title', 'Hide PMs');
+            // Loop through pms and show any that are pms.
+            $('.toolfeedmessages').children('.fpm').each(function(e){
+                $(this).slideDown();
+            });
+            App.tools['feed'].filterPMs = false;
+        }
+    });
+    
+    var btnFilterFriendInfo = $('<span class="faicon fa fa-heart" title="Hide Friend Activity"></span>');
+    domMainButtons.append(btnFilterFriendInfo);
+    btnFilterFriendInfo.click(function(){
+        if($(this).hasClass('fa-heart')){
+            $(this).removeClass('fa-heart');
+            $(this).addClass('fa-heart-o');
+            $(this).attr('title', 'Show Friend Activity');
+            // Loop through feed items and slidedown
+            $('.toolfeedmessages').children('.ffriendinfo').each(function(e){
+                $(this).slideUp();
+            });
+            App.tools['feed'].filterFriendActivity = true;
+        }
+        else {
+            $(this).removeClass('fa-heart-o');
+            $(this).addClass('fa-heart');
+            $(this).attr('title', 'Hide Friend Activity');
+            // Loop through feed items and slidedown
+            $('.toolfeedmessages').children('.ffriendinfo').each(function(e){
+                $(this).slideDown();
+            });
+            App.tools['feed'].filterFriendActivity = false;
+        }
+    });
+    
+    var btnFilterBookmarkInfo = $('<span class="faicon fa fa-bookmark" title="Hide Bookmark Activity"></span>');
+    domMainButtons.append(btnFilterBookmarkInfo);
+    btnFilterBookmarkInfo.click(function(){
+        if($(this).hasClass('fa-bookmark')){
+            $(this).removeClass('fa-bookmark');
+            $(this).addClass('fa-bookmark-o');
+            $(this).attr('title', 'Show Bookmark Activity');
+            // Loop through feed items and slidedown
+            $('.toolfeedmessages').children('.fbookmarkinfo').each(function(e){
+                $(this).slideUp();
+            });
+            App.tools['feed'].filterBookmarkActivity = true;
+        }
+        else {
+            $(this).removeClass('fa-bookmark-o');
+            $(this).addClass('fa-bookmark');
+            $(this).attr('title', 'Hide Bookmark Activity');
+            // Loop through feed items and slidedown
+            $('.toolfeedmessages').children('.fbookmarkinfo').each(function(e){
+                $(this).slideDown();
+            });
+            App.tools['feed'].filterBookmarkActivity = false;
+        }
+    });
 
-    var btnFilterMentions = $('<span class="faicon fa fa-commenting" title="Turn off Mentions"></span>');
+    var btnFilterMentions = $('<span class="faicon fa fa-commenting" title="Hide Mentions"></span>');
     domMainButtons.append(btnFilterMentions);
+    btnFilterMentions.click(function(){
+        if($(this).hasClass('fa-commenting')){
+            $(this).removeClass('fa-commenting');
+            $(this).addClass('fa-commenting-o');
+            $(this).attr('title', 'Show Mentions');
+            // Loop through feed items and slidedown
+            $('.toolfeedmessages').children('.fmention').each(function(e){
+                $(this).slideUp();
+            });
+            App.tools['feed'].filterMentions = true;
+        }
+        else {
+            $(this).removeClass('fa-commenting-o');
+            $(this).addClass('fa-commenting');
+            $(this).attr('title', 'Hide Mentions');
+            // Loop through feed items and slidedown
+            $('.toolfeedmessages').children('.fmention').each(function(e){
+                $(this).slideDown();
+            });
+            App.tools['feed'].filterMentions = false;
+        }
+    });
 
-    var btnFilterAlerts = $('<span class="faicon fa fa-exclamation-triangle" title="Turn off Alerts"></span>');
-    domMainButtons.append(btnFilterAlerts);
+    var btnFilterErrors = $('<span class="faicon fa fa-exclamation-circle" title="Hide Errors"></span>');
+    domMainButtons.append(btnFilterErrors);
+    btnFilterErrors.click(function(){
+        if($(this).hasClass('fa-exclamation-circle')){
+            $(this).removeClass('fa-exclamation-circle');
+            $(this).addClass('fa-circle-o');
+            $(this).attr('title', 'Show Errors');
+            // Loop through feed items and slidedown
+            $('.toolfeedmessages').children('.ferror').each(function(e){
+                $(this).slideUp();
+            });
+            App.tools['feed'].filterErrors = true;
+        }
+        else {
+            $(this).removeClass('fa-circle-o');
+            $(this).addClass('fa-exclamation-circle');
+            $(this).attr('title', 'Hide Errors');
+            // Loop through feed items and slidedown
+            $('.toolfeedmessages').children('.ferror').each(function(e){
+                $(this).slideDown();
+            });
+            App.tools['feed'].filterErrors = false;
+        }
+    });
     
     var btnTrashAll = $('<span class="faicon fa fa-trash" title="Trash All"></span>');
     domOtherButtons.append(btnTrashAll);
@@ -2176,64 +2327,46 @@ function createDomToolFeedMessage(type, message, sender){
     // Create a message dom for this message.
     var domMsg = $('<div class="feedmessage"></div>');
 
-    if(type !== 'pm'){
-        // Top bar
-        var topBar = $('<div class="feedmessagetopbar"></div>');
-        domMsg.append(topBar);
-
-        // Title
-        var typeText = getHumanReadableTimestampForNow() + ': ' + (type === App.consts.feed.types.pm ? sender : (type.charAt(0).toUpperCase() + type.substr(1)));
-        var domTitle = $('<span class="feedtitle">' + typeText + '</span>');
-        topBar.append(domTitle);
-
-        // Close button
-        var btnClose = $('<span class="famuted fa fa-times"></div>');
-        topBar.append(btnClose);
-        btnClose.click(function(){
-            $(this).parent().parent().slideUp('slow', function(){
-                $(this).remove();
-            });
-        });
-
-        // Message
-        var msg = $('<div class="feedmessagemessage">' + message + '</div>');
-        domMsg.append(msg);
-
-        // Extra classes
-        switch(type){
-            case 'error':
-                domMsg.addClass('error');
-                break;
-        }
-    }
-    else {
-        var domPM = $('<div class="feedpmcontainer"></div>');
-        domMsg.append(domPM);       
+    var domContainer = $('<div class="feedcontainer"></div>');
+    domMsg.append(domContainer);   
+    
+    // Stuff to add before buttons get added.
+    if(type === 'pm'){
+        // data
+        var domData = $('<span id="data" title="' + sender + '"></span>');
+        domMsg.append(domData);
         
         var domAvatar = $('<img class="avatar img-rounded" title="' + sender + '" src="https://static.f-list.net/images/avatar/' + escapeHtml(sender).toLowerCase() + '.png">');
-        domPM.append(domAvatar);
+        domContainer.append(domAvatar);        
+    }
+    
+    var domMessage = $('<div class="feedpmmessage"></div>');
+    domContainer.append(domMessage);
+    
+    // buttons
+    var domRightButtons = $('<div class="feedpmbuttons"></div>');
+    domContainer.append(domRightButtons);
+    
+    var domRBTwo = $('<div class="feedpmsbuttonstretch"></div>');
+    domRightButtons.append(domRBTwo);
+    
+    var domBtnClose = $('<span class="faicon fa fa-times" title="Close Message"></span>');
+    domRBTwo.append(domBtnClose);
+    domBtnClose.click(function(){
+        $(this).closest('.feedmessage').slideUp('slow', function(){
+            $(this).remove();
+        });
+    });    
+    
+    
+    if(type === 'pm'){   
+        message = ': ' + message;
         
-        var domMessage = $('<div class="feedpmmessage"></div>');
-        domPM.append(domMessage);
-        
-        var domUserEntry = createDomUserEntry(sender, App.characters[sender].gender, App.characters[sender].status, App.characters[sender].statusmsg);
-        domMessage.append(domUserEntry);
-        
-        domMessage.append(': ' + message);
-        
-        // buttons
-        var domRightButtons = $('<div class="feedpmbuttons"></div>');
-        domPM.append(domRightButtons);
-        
-        var domRBTwo = $('<div class="feedpmsbuttonstretch"></div>');
-        domRightButtons.append(domRBTwo);
-        
-        var domBtnClose = $('<span class="faicon fa fa-times" title="Close Message"></span>');
-        domRBTwo.append(domBtnClose);
-        domBtnClose.click(function(){
-            $(this).closest('.feedmessage').slideUp('slow', function(){
-                $(this).remove();
-            });
+        var domBtnView = $('<span class="faicon fa fa-eye"></span>');
+        domRBTwo.append(domBtnView);
+        domBtnView.click(function(){
+            targetViewerFor($(this).parent().parent().parent().parent().parent().find('#data').attr('title')); // parentception
+            toggleTool('viewer');
         });
         
         var domBtnReply = $('<span class="faicon fa fa-reply"></span>');
@@ -2242,15 +2375,59 @@ function createDomToolFeedMessage(type, message, sender){
             // Append the reply box
             var domReply = $('<div><textarea id="replytextarea"></textarea><button class="btn btn-default">Send</button></div>');
             $(this).closest('.fpm').append(domReply);
-            $(this).fadeOut();
             domReply.hide();
             domReply.slideDown();
+            
+            $(this).fadeOut();
         });
         
-        
-        // Extra classes
-        domMsg.addClass('fpm');
+        var domUserEntry = createDomUserEntry(sender, App.characters[sender].gender, App.characters[sender].status, App.characters[sender].statusmsg);
+        domMessage.append(domUserEntry);
     }
+    else {
+        var domTitle = $('<div class="feedtitle"></div>');
+        domMessage.append(domTitle);
+        
+        var ttl = getHumanReadableTimestampForNow() + ' - ';
+        switch(type){
+            case 'info':
+                ttl += 'Info';
+                break;
+            case 'error':
+                ttl += 'Error';
+                break;
+            case 'friendinfo':
+                ttl += 'Friend Activity';
+                break;
+            case 'bookmarkinfo':
+                ttl += 'Bookmark Activity';
+                break;
+        }        
+        
+        domTitle.append(ttl);
+    }
+    
+    domMessage.append(message);
+        
+    // Extra classes
+    switch(type){
+        case 'pm':
+            domMsg.addClass('fpm');
+            break;
+        case 'info':
+            domMsg.addClass('finfo');
+            break;
+        case 'error':
+            domMsg.addClass('ferror');
+            break;
+        case 'friendinfo':
+            domMsg.addClass('ffriendinfo');
+            break;
+        case 'bookmarkinfo':
+            domMsg.addClass('fbookmarkinfo');
+            break;
+    }
+    
 
     // return
     return domMsg;
@@ -2310,7 +2487,10 @@ function createDomToolViewer(){
     domTitleBar.append(btnOpenPM);
     App.tools['viewer'].buttonPM = btnOpenPM;
     btnOpenPM.click(function(){
-        openPM(App.tools['viewer'].target);
+        if(App.state.openPMs.indexOf(App.tools['viewer'].target) === -1){
+            openPM(App.tools['viewer'].target);
+        }
+        selectPM(App.tools['viewer'].target);
     });
     
     // Scroller
@@ -2472,7 +2652,7 @@ function createDomToolInfo(){
     var list = '<ul>';
     
     list += '<li>To view a character\'s profile click on their name.</li>';
-    list += '<li>Use the viewer to open a PM, set a bookmark, friend or unfriend, record memos and send notes.</li>';
+    list += '<li>Use the viewer to open a PM, set or unset a bookmark, friend or unfriend, view or edit memos and send notes.</li>';
     list += '<li>Hold Ctrl/Command and press spacebar to switch to the next channel.</li>';
     list += '<li>You can use /preview before your message to preview any BBCode you\'ve used, though there\'s no need to worry.. If you\'re BBCode is invalid, it will not be sent anyway.</li>';
     list += '<li>To see a full list of available commands, type /commands</li>';
