@@ -372,6 +372,22 @@ html, body {
     display: block;
 }
 
+.fpm .feedtitle {
+    color: #4f8de1;
+}
+
+.falert {
+    background-color: #985b3a;
+}
+
+.falert .feedtitle {
+    color: #e8b148;
+}
+
+.fmention {
+    
+}
+
 .feedcontainer {
     display: inline-table;
     width: 100%;
@@ -392,9 +408,10 @@ html, body {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    text-align: right;
 }
 
-.feedcontainer .avatar {
+.feedcontainer .pmavatar {
     float: left;
     width: 100px;
     height: 100px;
@@ -410,7 +427,7 @@ html, body {
     white-space: pre-wrap;
 }
 
-.fpm textarea {
+.fpm .replytextarea {
     width: 100%;
     height: 180px;
     resize: none;
@@ -420,6 +437,12 @@ html, body {
 .fpm .btn {
     width: 100%;
     margin-bottom: 5px;
+}
+
+.feedsentmessage {
+    margin-top: 10px;
+    font-style: italic;
+    color: #4f8de1;
 }
 
 

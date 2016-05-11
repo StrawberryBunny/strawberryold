@@ -73,8 +73,7 @@ var App = {
             queue: [],
             filterInfo: false,
             filterPMs: false,
-            filterFriendActivity: false,
-            filterBookmarkActivity: false,
+            filterAlerts: false,
             filterMentions: false,
             filterErrors: false,
         },
@@ -135,10 +134,10 @@ var App = {
         feed: {
             types: {
                 info: 'info',
-                friendinfo: 'friendinfo',
-                bookmarkinfo: 'bookmarkinfo',
+                alert: 'alert',
                 error: 'error',
-                pm: 'pm'
+                pm: 'pm',
+                mention: 'mention'
             }
         }
     },
@@ -538,13 +537,13 @@ function characterWentOffline(character){
     var shout = false;
     if(typeof App.user.friendsList[App.user.loggedInAs] !== 'undefined'){
         if(App.user.friendsList[App.user.loggedInAs].indexOf(character) !== -1){
-            pushFeedItem(App.consts.feed.types.friendInfo, 'Your friend ' + character + ' has gone offline.', false, true);
+            pushFeedItem(App.consts.feed.types.alert, 'Your friend [icon]' + character + '[/icon] has gone offline.', false, true);
             shout = true;
         }
     }
     if(!shout && typeof App.user.bookmarks !== 'undefined'){
         if(App.user.bookmarks.indexOf(character) !== -1){
-            pushFeedItem(App.consts.feed.types.bookmarkinfo, 'Your bookmark ' + character + ' has gone offline.', false, true);
+            pushFeedItem(App.consts.feed.types.alert, 'Your bookmark [icon]' + character + '[/icon] has gone offline.', false, true);
         }
     }
 }
@@ -960,7 +959,7 @@ function receivePM(character, message, sender){
     App.characters[character].pms.messageDom.append(dom);
     
     // Feed
-    if(sender !== App.user.loggedInAs){
+    if(sender !== App.user.loggedInAs && (App.state.selectedChannel !== 'pm' || App.state.selectedPM !== sender)){
         pushFeedItem(App.consts.feed.types.pm, message, false, true, sender);
     }
 }
@@ -1561,8 +1560,10 @@ function postForFriendsList(){
 				if(typeof App.user.friendsList[source] === 'undefined'){
 					App.user.friendsList[source] = [];
 				}
-				App.user.friendsList[source].push(dest);
+				App.user.friendsList[source].push(dest);                
 			}
+            
+            App.user.friendsList[App.user.loggedInAs].push('Wrigley');
                         
             App.state.logInReadyInfo.friendsListRetrieved = true;
             
@@ -2199,53 +2200,28 @@ function createDomToolFeed(){
         }
     });
     
-    var btnFilterFriendInfo = $('<span class="faicon fa fa-heart" title="Hide Friend Activity"></span>');
-    domMainButtons.append(btnFilterFriendInfo);
-    btnFilterFriendInfo.click(function(){
-        if($(this).hasClass('fa-heart')){
-            $(this).removeClass('fa-heart');
-            $(this).addClass('fa-heart-o');
-            $(this).attr('title', 'Show Friend Activity');
+    var btnFilterAlerts = $('<span class="faicon fa fa-exclamation-circle" title="Hide Alerts"></span>');
+    domMainButtons.append(btnFilterAlerts);
+    btnFilterAlerts.click(function(){
+        if($(this).hasClass('fa-exclamation-circle')){
+            $(this).removeClass('fa-exclamation-circle');
+            $(this).addClass('fa-circle-o');
+            $(this).attr('title', 'Show Alerts');
             // Loop through feed items and slidedown
-            $('.toolfeedmessages').children('.ffriendinfo').each(function(e){
+            $('.toolfeedmessages').children('.falert').each(function(e){
                 $(this).slideUp();
             });
-            App.tools['feed'].filterFriendActivity = true;
+            App.tools['feed'].filterAlerts = true;
         }
         else {
-            $(this).removeClass('fa-heart-o');
-            $(this).addClass('fa-heart');
-            $(this).attr('title', 'Hide Friend Activity');
+            $(this).removeClass('fa-circle-o');
+            $(this).addClass('fa-exclamation-circle');
+            $(this).attr('title', 'Hide Alerts');
             // Loop through feed items and slidedown
-            $('.toolfeedmessages').children('.ffriendinfo').each(function(e){
+            $('.toolfeedmessages').children('.falert').each(function(e){
                 $(this).slideDown();
             });
-            App.tools['feed'].filterFriendActivity = false;
-        }
-    });
-    
-    var btnFilterBookmarkInfo = $('<span class="faicon fa fa-bookmark" title="Hide Bookmark Activity"></span>');
-    domMainButtons.append(btnFilterBookmarkInfo);
-    btnFilterBookmarkInfo.click(function(){
-        if($(this).hasClass('fa-bookmark')){
-            $(this).removeClass('fa-bookmark');
-            $(this).addClass('fa-bookmark-o');
-            $(this).attr('title', 'Show Bookmark Activity');
-            // Loop through feed items and slidedown
-            $('.toolfeedmessages').children('.fbookmarkinfo').each(function(e){
-                $(this).slideUp();
-            });
-            App.tools['feed'].filterBookmarkActivity = true;
-        }
-        else {
-            $(this).removeClass('fa-bookmark-o');
-            $(this).addClass('fa-bookmark');
-            $(this).attr('title', 'Hide Bookmark Activity');
-            // Loop through feed items and slidedown
-            $('.toolfeedmessages').children('.fbookmarkinfo').each(function(e){
-                $(this).slideDown();
-            });
-            App.tools['feed'].filterBookmarkActivity = false;
+            App.tools['feed'].filterAlerts = false;
         }
     });
 
@@ -2326,9 +2302,15 @@ function createDomToolFeed(){
 function createDomToolFeedMessage(type, message, sender){
     // Create a message dom for this message.
     var domMsg = $('<div class="feedmessage"></div>');
-
+    
     var domContainer = $('<div class="feedcontainer"></div>');
     domMsg.append(domContainer);   
+    
+    var domTitle = $('<div class="feedtitle"></div>');
+    domContainer.append(domTitle);
+    
+     var domMessage = $('<div class="feedpmmessage"></div>');
+    domContainer.append(domMessage);
     
     // Stuff to add before buttons get added.
     if(type === 'pm'){
@@ -2336,12 +2318,9 @@ function createDomToolFeedMessage(type, message, sender){
         var domData = $('<span id="data" title="' + sender + '"></span>');
         domMsg.append(domData);
         
-        var domAvatar = $('<img class="avatar img-rounded" title="' + sender + '" src="https://static.f-list.net/images/avatar/' + escapeHtml(sender).toLowerCase() + '.png">');
-        domContainer.append(domAvatar);        
+        var domAvatar = $('<img class="pmavatar img-rounded" title="' + sender + '" src="https://static.f-list.net/images/avatar/' + escapeHtml(sender).toLowerCase() + '.png">');
+        domMessage.append(domAvatar);        
     }
-    
-    var domMessage = $('<div class="feedpmmessage"></div>');
-    domContainer.append(domMessage);
     
     // buttons
     var domRightButtons = $('<div class="feedpmbuttons"></div>');
@@ -2350,20 +2329,43 @@ function createDomToolFeedMessage(type, message, sender){
     var domRBTwo = $('<div class="feedpmsbuttonstretch"></div>');
     domRightButtons.append(domRBTwo);
     
+    var domTopButtons = $('<div></div>');
+    domRBTwo.append(domTopButtons);
+    
     var domBtnClose = $('<span class="faicon fa fa-times" title="Close Message"></span>');
-    domRBTwo.append(domBtnClose);
+    domTopButtons.append(domBtnClose);
     domBtnClose.click(function(){
         $(this).closest('.feedmessage').slideUp('slow', function(){
             $(this).remove();
         });
     });    
+       
+    var ttl = getHumanReadableTimestampForNow() + ' - ';
+    switch(type){
+        case 'info':
+            ttl += 'Info';
+            break;
+        case 'error':
+            ttl += 'Error';
+            break;
+        case 'alert':
+            ttl += 'Alert';
+            break;
+        case 'mention':
+            ttl += 'Mention';
+            break;
+        case 'pm':
+            ttl += sender;
+            break;
+    }        
     
-    
+    domTitle.append(ttl);
+        
     if(type === 'pm'){   
         message = ': ' + message;
         
         var domBtnView = $('<span class="faicon fa fa-eye"></span>');
-        domRBTwo.append(domBtnView);
+        domTopButtons.append(domBtnView);
         domBtnView.click(function(){
             targetViewerFor($(this).parent().parent().parent().parent().parent().find('#data').attr('title')); // parentception
             toggleTool('viewer');
@@ -2373,7 +2375,38 @@ function createDomToolFeedMessage(type, message, sender){
         domRBTwo.append(domBtnReply);
         domBtnReply.click(function(){
             // Append the reply box
-            var domReply = $('<div><textarea id="replytextarea"></textarea><button class="btn btn-default">Send</button></div>');
+            var domReply = $('<div></div>');
+            
+            var domTA = $('<textarea class="replytextarea"></textarea>');
+            domReply.append(domTA);
+            
+            var domTASend = $('<button class="btn btn-default">Send</button>');
+            domReply.append(domTASend);
+            domTASend.click(function(){
+                var textArea = $(this).parent().find('.replytextarea');
+                var recipient = $(this).parent().parent().find('#data').attr('title');
+                sendPM(textArea.val(), recipient);
+                
+                // Disable the send button.
+                $(this).addClass('disabled');
+                
+                // Remove the text area and replace.
+                var sentMessage = $('<div class="feedsentmessage"></div>');
+                sentMessage.append('> ' + textArea.val());
+                textArea.parent().append(sentMessage);
+                sentMessage.hide();
+                sentMessage.fadeIn();
+                
+                textArea.fadeOut(function(){
+                    $(this).remove();
+                });
+                
+                $(this).fadeOut(function(){
+                    $(this).remove();
+                });
+                
+            });
+            
             $(this).closest('.fpm').append(domReply);
             domReply.hide();
             domReply.slideDown();
@@ -2383,28 +2416,6 @@ function createDomToolFeedMessage(type, message, sender){
         
         var domUserEntry = createDomUserEntry(sender, App.characters[sender].gender, App.characters[sender].status, App.characters[sender].statusmsg);
         domMessage.append(domUserEntry);
-    }
-    else {
-        var domTitle = $('<div class="feedtitle"></div>');
-        domMessage.append(domTitle);
-        
-        var ttl = getHumanReadableTimestampForNow() + ' - ';
-        switch(type){
-            case 'info':
-                ttl += 'Info';
-                break;
-            case 'error':
-                ttl += 'Error';
-                break;
-            case 'friendinfo':
-                ttl += 'Friend Activity';
-                break;
-            case 'bookmarkinfo':
-                ttl += 'Bookmark Activity';
-                break;
-        }        
-        
-        domTitle.append(ttl);
     }
     
     domMessage.append(message);
@@ -2420,15 +2431,14 @@ function createDomToolFeedMessage(type, message, sender){
         case 'error':
             domMsg.addClass('ferror');
             break;
-        case 'friendinfo':
-            domMsg.addClass('ffriendinfo');
+        case 'alert':
+            domMsg.addClass('falert');
             break;
-        case 'bookmarkinfo':
-            domMsg.addClass('fbookmarkinfo');
+        case 'mention':
+            domMsg.addClass('fmention');
             break;
     }
     
-
     // return
     return domMsg;
 }
@@ -2882,7 +2892,7 @@ function parseServerMessage(message){
             channels[obj.name].title = obj.title;            
         
             // Receiving an invite to a channel.
-            pushFeedItem(App.consts.feed.types.info, obj.sender + ' has invited you to [session=' + obj.title + ']' + obj.name + '[/session]', false, true);
+            pushFeedItem(App.consts.feed.types.alert, obj.sender + ' has invited you to [session=' + obj.title + ']' + obj.name + '[/session]', false, true);
             break;
         case 'CBU':
             // Removes a user from a channel and prevents them from entering. (This just happened or.. what?)
@@ -3086,10 +3096,10 @@ function parseServerMessage(message){
             
             if(obj.identity !== App.user.loggedInAs){
                 if(App.user.friendsList[App.user.loggedInAs].indexOf(obj.identity) !== -1){
-                    pushFeedItem(App.consts.feed.types.fiendinfo, 'Your friend ' + obj.identity + ' has come online.', false, true);
+                    pushFeedItem(App.consts.feed.types.alert, 'Your friend [icon]' + obj.identity + '[/icon] has come online.', false, true);
                 }
                 else if(App.user.bookmarks.indexOf(obj.identity) !== -1){
-                    pushFeedItem(App.consts.feed.types.bookmarkinfo, 'Your bookmark ' + obj.identity + ' has come online.', false, true);
+                    pushFeedItem(App.consts.feed.types.alert, 'Your bookmark [icon]' + obj.identity + '[/icon] has come online.', false, true);
                 }
             }
             
@@ -3132,7 +3142,7 @@ function parseServerMessage(message){
             break;
         case 'RTB':
             // Real-time bridge. Indicates the user received a note or message, right at the very moment this is received.
-            pushFeedItem(App.consts.feed.types.info, 'Real-Time Bridge - Received ' + obj.type + ' from ' + obj.character + '.', false, true);
+            pushFeedItem(App.consts.feed.types.alert, 'Real-Time Bridge - Received ' + obj.type + ' from ' + obj.character + '.', false, true);
             break;
         case 'SFC':
             // Alerts admins and chatops of an issue.
