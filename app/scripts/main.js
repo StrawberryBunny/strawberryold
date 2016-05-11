@@ -2214,16 +2214,13 @@ function createDomToolFeedMessage(type, message, sender){
             case 'error':
                 domMsg.addClass('error');
                 break;
-            case 'pm':
-                domMsg.addClass('pm');
-                break;
         }
     }
     else {
         var domPM = $('<div class="feedpmcontainer"></div>');
-        domMsg.append(domPM);
+        domMsg.append(domPM);       
         
-        var domAvatar = $('<img class="avatar" title="' + sender + '" src="https://static.f-list.net/images/avatar/' + escapeHtml(sender).toLowerCase() + '.png">');
+        var domAvatar = $('<img class="avatar img-rounded" title="' + sender + '" src="https://static.f-list.net/images/avatar/' + escapeHtml(sender).toLowerCase() + '.png">');
         domPM.append(domAvatar);
         
         var domMessage = $('<div class="feedpmmessage"></div>');
@@ -2234,8 +2231,28 @@ function createDomToolFeedMessage(type, message, sender){
         
         domMessage.append(': ' + message);
         
+        // buttons
+        var domRightButtons = $('<div class="feedpmbuttons"></div>');
+        domPM.append(domRightButtons);
+        
+        var domRBTwo = $('<div class="feedpmsbuttonstretch"></div>');
+        domRightButtons.append(domRBTwo);
+        
+        var domBtnClose = $('<span class="faicon fa fa-times"></span>');
+        domRBTwo.append(domBtnClose);
+        domBtnClose.click(function(){
+            console.log("height: " + $(this).closest('.feedmessage').height());
+            $(this).closest('.feedmessage').slideUp('slow', function(){
+                $(this).remove();
+            });
+        });
+        
+        var domBtnReply = $('<span class="faicon fa fa-reply"></span>');
+        domRBTwo.append(domBtnReply);
+        
+        
         // Extra classes
-        domMsg.addClass('pm');
+        domMsg.addClass('fpm');
     }
 
     // return
@@ -2629,7 +2646,7 @@ function parseServerMessage(message){
         var obj = JSON.parse(message.substr(3));
     }
 
-    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'ORS', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'NLN', 'JCH', 'LCH', 'ERR', 'FLN', 'PRI'];
+    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'ORS', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'NLN', 'JCH', 'LCH', 'ERR', 'FLN', 'PRI', 'TPN'];
     if(dontLog.indexOf(tag) === -1){
         console.log(message);
     }

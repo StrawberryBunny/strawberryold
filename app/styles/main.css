@@ -361,25 +361,48 @@ html, body {
     color: #ea4933;
 }
 
-.pm {
-    display: block;
+.fpm {
     background-color: #2d4461;
-    white-space: pre-wrap;
-    padding: 5px;
-    overflow: hidden;
+    display: block;
+}
+
+.feedpmcontainer {
+    display: inline-table;
+}
+
+.feedpmbuttons {
+    display: table-cell;
+    height: 100%;
+    width: 32px;
+    font-size: 24px; 
+    position: relative;
+}
+
+.feedpmsbuttonstretch {
+    position: absolute;
+    height: 100%;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .feedpmcontainer .avatar {
     float: left;
-    width: 64px;
-    height: 64px;
-    margin-right: 20px;
+    width: 100px;
+    height: 100px;
+    margin-right: 5px;
     margin-bottom: 5px;
 }
 
 .feedpmcontainer .userentry {
     display: inline-flex;
 }
+
+.feedpmmessage {
+    white-space: pre-wrap;
+}
+
 
 
 
