@@ -271,12 +271,19 @@ var App = {
             usage: '/me <action>',
             description: 'Sends an in-character action to the active channel. Do not include the <> brackets.',
             examples: ['/me rolls around.', '/me flop on a couch.', '/me says something witty.'],
-            alias: [],
+            alias: ['me\'', 'me\'s'],
             func: function(e){
                 if(App.state.selectedChannel === ''){
                     return false;
                 }
-                sendChatMessage('/me ' + e, App.state.selectedChannel);
+                   
+                if(App.state.selectedChannel !== 'pm'){
+                    sendChatMessage(e, App.state.selectedChannel);
+                }
+                else {
+                    sendPM(e, App.state.selectedPM);
+                }
+                
                 return true;
             }           
         },
@@ -409,17 +416,24 @@ function sendChatMessageToActiveWindow(message){
         var command = split[0].substr(1);
         
         for(var i = 0; i < App.commands.length; i++){
+            // special case /me's
+            /*if(App.commands[i].name === 'me'){                     
+                if(command === "me" || command === "me'" || command === "me's"){
+                    return App.commands[i].func(message);
+                }
+            }*/
+            
             if(App.commands[i].name === command){
-                return App.commands[i].func(message.substring(command.length + 2));
+                return App.commands[i].func(command !== 'me' ? message.substring(command.length + 2) : message);
             }
             
             for(var j = 0; j < App.commands[i].alias.length; j++){
                 if(App.commands[i].alias[j] === command){
-                    return App.commands[i].func(message.substring(command.length + 2));                    
+                    return App.commands[i].func(command !== "me'" && command !== "me's" ? message.substring(command.length + 2) : message);                    
                 }
             }
-        }
-        
+        }        
+         
         return false;
     }
     else if(App.state.selectedChannel !== 'pm'){
@@ -433,7 +447,7 @@ function sendChatMessageToActiveWindow(message){
 function sendChatMessage(message, channel){
     // Check for bullcrap
     var strippedMessage = stripWhitespace(message);
-    if(message === '' || strippedMessage === '' || strippedMessage.length === 0 || channel === '' || channel.length === 0){
+    if(message === null || typeof message === 'undefined' || message === '' || strippedMessage === '' || strippedMessage.length === 0 || channel === '' || channel.length === 0){
         return false;
     }
 
@@ -451,9 +465,18 @@ function sendChatMessage(message, channel){
         pushFeedItem(App.consts.feed.types.error, errorMessage, true);
         return false;
     }
+    
+    // Is it /me?
+    var serverMessage = message;
+    if(message.substr(0, 5) === "/me's"){
+        serverMessage = '/me ' + message.substr(3);
+    }
+    else if(message.substr(0, 4) === "/me'"){
+        serverMessage = '/me ' + message.substr(3);
+    }
 
     // Send message to server
-    sendMessageToServer('MSG { "channel": "' + channel + '", "message": "' + escapeJson(message) + '" }');
+    sendMessageToServer('MSG { "channel": "' + channel + '", "message": "' + escapeJson(serverMessage) + '" }');
 
     // Add the message to the chat window
     receiveMessage(channel, App.user.loggedInAs, message);
@@ -2826,7 +2849,7 @@ function createDomAlert(message){
     return $('<div class="alert alert-danger fade in"><a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a><strong>Error!</strong> ' + message + '</div>');
 }
 
-function createDomUserEntry(name, gender, status, statusmsg){
+function createDomUserEntry(name, gender, status, statusmsg, slashMe){
     var domContainer = $('<div class="userentry" title="' + name + '"></div>');
 
     var genderColour = '#444444';
@@ -2836,37 +2859,52 @@ function createDomUserEntry(name, gender, status, statusmsg){
         genderColour = App.options.genderColours[App.characters[name].gender.toLowerCase()];
     }
 
-    domContainer.append('<div class="nameplate" style="color: ' + genderColour + '" title="' + statusmsg + '">' + name + '</div>');
+    domContainer.append('<div class="nameplate" style="color: ' + genderColour + '" title="' + statusmsg + '">' + (slashMe ? '<i>' : '') + name + (slashMe ? '</i>' : '') + '</i></div>');
     
     return domContainer;
 }
 
 function createDomMessage(character, message){
+    var isMe = message.substr(0, 3) === '/me';
+    
     var domContainer = $('<div class="message"></div>');
     
-    var finalMessage = '';
     if(character.toLowerCase() === 'description'){
-        finalMessage = '<b>Description</b>: ';
+        message = '[b]Description[/b]: ' + message;
     }
     else if(character.toLowerCase() === 'preview'){
-        finalMessage = '<b>Preview</b>: ';
+        message = '[b]Preview[/b]: ' + message;
     }
     else {
         var gender = App.characters[character].gender;
         var status = App.characters[character].status;
         var statusmsg = App.characters[character].statusmsg;
-        var userEntry = createDomUserEntry(character, gender, status, statusmsg);
+        var userEntry = createDomUserEntry(character, gender, status, statusmsg, isMe);
         domContainer.append(userEntry);
-        finalMessage = ': ';
+        if(!isMe){
+            message = ': ' + message;
+        }
+        else {
+            if(message.substr(3, 2) === "'s"){
+                 message = "[i]'s"  + message.substr(5) + '[/i]';
+            }
+            else if(message.charAt(3) === "'"){
+                message = "[i]'"  + message.substr(4) + '[/i]';
+            }
+            else if(message.charAt(4) === "'"){
+                message = '[i]' + message.substr(4) + '[/i]';
+            }
+            else {
+                message = '[i] ' + message.substr(4) + '[/i]';
+            }
+        }
     }
     
     var bb = XBBCODE.process({
         text: message
     });
     
-    finalMessage += bb.html;    
-
-    domContainer.append('<div class="messagetext">' + finalMessage + '</div>');
+    domContainer.append('<div class="messagetext">' + bb.html + '</div>');
 
     return domContainer;
 }
