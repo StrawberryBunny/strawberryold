@@ -4,7 +4,8 @@
   "dependencies": {
     "bootstrap": "~3.3.5",
     "font-awesome": "^4.6.2",
-    "components-font-awesome": "^4.6.1"
+    "components-font-awesome": "^4.6.1",
+    "cookie": "^1.2.0"
   },
   "overrides": {
     "bootstrap": {

@@ -382,6 +382,22 @@ function checkForReadyStatus(){
     }   
 }
 
+function logInComplete(account, ticket, characters){
+    // Store the data we got back
+    App.user.account = account;
+    App.user.ticket = ticket;
+    App.user.characters = characters;
+
+    // Hide the login container
+    $('.maincontainer').remove();
+
+    // Create the login character selector dom
+    $('body').append(createDomLoginCharacterSelector());
+    
+    // Save to cookie
+    cookie.set('session', account + '|' + ticket + '|' + characters, { expires: 1 });
+}
+
 function throwError(message){
     pushFeedItem(App.consts.feed.types.error, message, true);
 }
@@ -1092,7 +1108,7 @@ function pushFeedItem(type, message, showFeed, count, sender){
         App.tools['feed'].counter.text.fadeIn();
     }
     
-    if(showFeed && App.state.currentTool !== 'feed'){
+    if(showFeed && App.state.currentTool !== 'feed' && typeof App.tools['feed'].content !== 'undefined'){
         toggleTool('feed');
         displayQueuedFeedMessages();
     }
@@ -1536,7 +1552,6 @@ function numberEnding (number) {
     return (number > 1) ? 's' : '';
 }
 
-
 function stripWhitespace(str){
 	return str.replace(/ /g, '').replace(/[^\w\s]/gi, '');
 }
@@ -1556,6 +1571,12 @@ function arrayMove(array, from, to){
     array.splice(to, 0, array.splice(from, 1)[0]);
 }
 
+function lengthInUtf8Bytes(str){
+    // Matches only the 10.. bytes that are non-initial characters in a multi-byte sequence.
+    var m = encodeURIComponent(str).match(/%[89ABab]/g);
+    return str.length + (m ? m.length : 0);
+}
+
 /**
  * JSON Endpoint Helpers ===========================================================================================================
  */
@@ -1573,16 +1594,7 @@ function postForTicket(account, password){
                 });
             }
             else {
-                // Store the data we got back
-                App.user.account = account;
-                App.user.ticket = data.ticket;
-                App.user.characters = data.characters;
-
-                // Hide the login container
-                $('.maincontainer').remove();
-
-                // Create the login character selector dom
-                $('body').append(createDomLoginCharacterSelector());
+                logInComplete(account, data.ticket, data.characters);
             }
         }
     );
@@ -3381,9 +3393,17 @@ $(document).ready(function(){
         layout();
     });
     
-    // Create the login dom
-    $('body').append(createDomLogin());
-    
+    // Do we have a cookie?
+    var ckSession = cookie.get('session', 'none');
+    if(ckSession === 'none'){
+        // Create the login dom
+        $('body').append(createDomLogin());
+    }
+    else {
+        var split = ckSession.split('|');
+        logInComplete(split[0], split[1], split[2].split(','));
+    }
+       
     // Future session links.
     $(document).on('click', '.sessionlink', function(e){
         joinChannel($(this).attr('id'));

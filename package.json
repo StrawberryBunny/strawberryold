@@ -31,7 +31,7 @@
       "es6": true,
       "node": true,
       "browser": true,
-	    "jquery": true
+      "jquery": true
     },
     "rules": {
       "quotes": [
@@ -40,13 +40,16 @@
       ],
       "no-trailing-spaces": 0,
       "no-use-before-define": 0,
-	  "key-spacing": 0,
-	  "no-multi-spaces": 0,
-	  "dot-notation": 0,
-    "camelcase": 0,
-    "no-unused-vars": 0,
-    "space-infix-ops": 0,
-    "no-loop-func": 0
+      "key-spacing": 0,
+      "no-multi-spaces": 0,
+      "dot-notation": 0,
+      "camelcase": 0,
+      "no-unused-vars": 0,
+      "space-infix-ops": 0,
+      "no-loop-func": 0
     }
+  },
+  "dependencies": {
+    "cookie_js": "^1.2.0"
   }
 }
