@@ -1266,78 +1266,90 @@ function viewerUpdateCharacterInfo(data){
     var container = $('.toolviewerarea');
     
     // Contact details/sites.
-    var list;
-    var contactDetails = data.info[1].items;
-    if(contactDetails.length > 0){
-        container.append('<p><b>Contact Details / Sites</b></p>');
-        list = '<ul>';
-        for(var i = 0; i < contactDetails[i].length; i++){
-            list += '<li><b>' + contactDetails[i].name + '</b>: ' + contactDetails[i].value + '</li>';
+    if(typeof data.info !== 'undefined'){
+        var list;
+        if(typeof data.info[1] !== 'undefined'){
+            var contactDetails = data.info[1].items;
+            if(contactDetails.length > 0){
+                container.append('<p><b>Contact Details / Sites</b></p>');
+                list = '<ul>';
+                for(var i = 0; i < contactDetails[i].length; i++){
+                    list += '<li><b>' + contactDetails[i].name + '</b>: ' + contactDetails[i].value + '</li>';
+                }
+                list += '</ul>';
+                container.append(list);
+            }
         }
-        list += '</ul>';
-        container.append(list);
-    }
-    
-    // Sexual Details
-    var sexualDetails = data.info[2].items;
-    if(sexualDetails.length > 0){
-        container.append('<p><b>Sexual Details</b></p>');
-        list = '<ul>';
-        for(i = 0; i < sexualDetails.length; i++){
-            list += '<li><b>' + sexualDetails[i].name + '</b>: ' + sexualDetails[i].value + '</li>';
+        
+        // Sexual Details
+        if(typeof data.info[2] !== 'undefined'){
+            var sexualDetails = data.info[2].items;
+            if(sexualDetails.length > 0){
+                container.append('<p><b>Sexual Details</b></p>');
+                list = '<ul>';
+                for(i = 0; i < sexualDetails.length; i++){
+                    list += '<li><b>' + sexualDetails[i].name + '</b>: ' + sexualDetails[i].value + '</li>';
+                }
+                list += '</ul>';
+                container.append(list);
+            }
         }
-        list += '</ul>';
-        container.append(list);
-    }
-    
-    // General Details
-    var generalDetails = data.info[3].items;
-    if(generalDetails.length > 0){
-        container.append('<p><b>General Details</b></p>');
-        list = '<ul>';
-        for(i = 0; i < generalDetails.length; i++){
-            list += '<li><b>' + generalDetails[i].name + '</b>: ' + generalDetails[i].value + '</li>';
+        
+        // General Details
+        if(typeof data.info[3] !== 'undefined'){
+            var generalDetails = data.info[3].items;
+            if(generalDetails.length > 0){
+                container.append('<p><b>General Details</b></p>');
+                list = '<ul>';
+                for(i = 0; i < generalDetails.length; i++){
+                    list += '<li><b>' + generalDetails[i].name + '</b>: ' + generalDetails[i].value + '</li>';
+                }
+                list += '</ul>';
+                container.append(list);
+            }
         }
-        list += '</ul>';
-        container.append(list);
-    }
-    
-    // RPing Preferences.
-    var rpingPrefs = data.info[5].items;
-    if(rpingPrefs.length > 0){
-        container.append('<p><b>RPing Preferences</b></p>');
-        list = '<ul>';
-        for(i = 0; i < rpingPrefs.length; i++){
-            list += '<li><b>' + rpingPrefs[i].name + '</b>: ' + rpingPrefs[i].value + '</li>';
+        
+        // RPing Preferences.
+        if(typeof data.info[5] !== 'undefined'){
+            var rpingPrefs = data.info[5].items;
+            if(rpingPrefs.length > 0){
+                container.append('<p><b>RPing Preferences</b></p>');
+                list = '<ul>';
+                for(i = 0; i < rpingPrefs.length; i++){
+                    list += '<li><b>' + rpingPrefs[i].name + '</b>: ' + rpingPrefs[i].value + '</li>';
+                }
+                list += '</ul>';
+                container.append(list);
+            }
         }
-        list += '</ul>';
-        container.append(list);
     }
 }
 
 function viewerUpdatePictures(data){
-    // fetch container
-    var container = $('.toolviewerarea');
-    
-    // Loop images
-    for(var i = 0; i < data.images.length; i++){
-        var domImage = $('<div class="viewerimage"></div>');
-        
-        domImage.append('<a href="' + data.images[i].url + '" target="_blank"><img class="img-responsive" src="' + data.images[i].url + '" title="' + data.images[i].description + '"/></a>');
-        
-        if(data.images[i].description.length > 0){
-            domImage.append('<span class="viewerimagedescription">' + data.images[i].description + '</span></div>');
+    if(typeof data.images !== 'undefined'){
+        // fetch container
+        var container = $('.toolviewerarea');
+            
+        // Loop images    
+        for(var i = 0; i < data.images.length; i++){
+            var domImage = $('<div class="viewerimage"></div>');
+            
+            domImage.append('<a href="' + data.images[i].url + '" target="_blank"><img class="img-responsive" src="' + data.images[i].url + '" title="' + data.images[i].description + '"/></a>');
+            
+            if(data.images[i].description.length > 0){
+                domImage.append('<span class="viewerimagedescription">' + data.images[i].description + '</span></div>');
+            }
+            
+            container.append(domImage);
         }
         
-        container.append(domImage);
+        // Re-enable buttons.
+        //App.tools['viewer'].buttonPM.removeClass('disabled');
+        App.tools['viewer'].buttonBookmark.removeClass('disabled');
+        App.tools['viewer'].buttonFriend.removeClass('disabled');
+        App.tools['viewer'].buttonMemo.removeClass('disabled');
+        App.tools['viewer'].buttonNote.removeClass('disabled');
     }
-    
-    // Re-enable buttons.
-    //App.tools['viewer'].buttonPM.removeClass('disabled');
-    App.tools['viewer'].buttonBookmark.removeClass('disabled');
-    App.tools['viewer'].buttonFriend.removeClass('disabled');
-    App.tools['viewer'].buttonMemo.removeClass('disabled');
-    App.tools['viewer'].buttonNote.removeClass('disabled');
 }
 
 /**
@@ -1452,12 +1464,12 @@ function isCharacterBookmarked(character){
 function isCharacterOurFriend(character, allCharacters){
     if(allCharacters){
         for(var key in App.user.friendsList){
-            if(App.user.friendsList[key].indexOf(character) !== -1){
+            if(typeof App.user.friendsList[key] !== 'undefined' && App.user.friendsList[key].indexOf(character) !== -1){
                 return true;
             }
         }        
     }
-    else if(App.user.friendsList[App.user.loggedInAs].indexOf(character) !== -1){
+    else if(typeof App.user.friendsList[App.user.loggedInAs] !== 'undefined' && App.user.friendsList[App.user.loggedInAs].indexOf(character) !== -1){
          return true;
     }   
     
@@ -1580,7 +1592,7 @@ function postForFriendsList(){
     $.post('https://www.f-list.net/json/api/friend-list.php', 
 		'ticket=' + App.user.ticket + '&account=' + App.user.account,
 		function(data){			
-			var friends = data.friends;
+            var friends = data.friends;
 			App.user.friendsList = {};
 			for(var i = 0; i < friends.length; i++){
 				var source = friends[i].source;
@@ -1932,7 +1944,7 @@ function createDomMain(){
 
     var domTextEntry = $('<div class="textentry"></div>');
     domMain.append(domTextEntry);
-
+    
         var domMainInput = $('<div class="maininputcontainer"></div>');
         domTextEntry.append(domMainInput);
 
@@ -1946,6 +1958,28 @@ function createDomMain(){
                     if(result){
                         App.dom.mainTextEntry.val('');
                     }
+                    return;
+                }
+                else if(e.which !== 16){
+                    if(App.state.selectedChannel === 'pm'){
+                        var pmsObj = App.characters[App.state.selectedPM].pms;
+                        if(pmsObj.typingTimeout === 'undefined' || pmsObj.typingTimeout === null){
+                            // Send message
+                            sendMessageToServer('TPN { "character": "' + App.state.selectedPM + '", "status": "typing" }');
+                            // Set timeout
+                            pmsObj.typingTimeout = setTimeout(createTypingStatusTimeoutCallback(App.state.selectedPM), 5000);
+                            // Record character
+                        }
+                        else {
+                            
+                            
+                            // Just extend the timeout for this character
+                            clearTimeout(pmsObj.typingTimeout);
+                            
+                            // Set new timeout
+                            pmsObj.typingTimeout = setTimeout(createTypingStatusTimeoutCallback(App.state.selectedPM), 5000);
+                        }
+                    }
                 }
             });
 
@@ -1957,6 +1991,12 @@ function createDomMain(){
             App.dom.mainTextEntryButton = domTextEntryButton;
             domTextEntryButton.click(function(e){
                 e.preventDefault();
+                
+                // Clear the typing status timeout
+                if(App.state.selectedChannel === 'pm'){
+                    clearTimeout(App.characters[App.state.selectedPM].pms.typingTimeout);
+                }
+                
                 var result = sendChatMessageToActiveWindow(App.dom.mainTextEntry.val());
                 if(result){
                     App.dom.mainTextEntry.val('');
@@ -1974,6 +2014,15 @@ function createUserListCloseButtonClickCallback(){
         else {
             closePM(App.state.selectedPM);
         }
+    };
+}
+
+function createTypingStatusTimeoutCallback(character){
+    return function(){
+        // Send message
+        sendMessageToServer('TPN { "character": "' + character + '", "status": "paused" }');
+        // Clear timeout
+        App.characters[character].pms.typingTimeout = null;
     };
 }
 
@@ -3126,6 +3175,7 @@ function parseServerMessage(message){
             }
             App.characters[obj.identity].gender = obj.gender;
             App.characters[obj.identity].status = stylizeStatus(obj.status);
+            App.characters[obj.identity].pms = {};
 
             // Was this character our friend or bookmark?
             
