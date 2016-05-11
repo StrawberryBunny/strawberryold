@@ -1562,8 +1562,6 @@ function postForFriendsList(){
 				}
 				App.user.friendsList[source].push(dest);                
 			}
-            
-            App.user.friendsList[App.user.loggedInAs].push('Wrigley');
                         
             App.state.logInReadyInfo.friendsListRetrieved = true;
             
