@@ -2745,9 +2745,6 @@ function parseServerMessage(message){
             // The given character has been stripped of chat op status.
             break;
         case 'ERR':
-            console.log('================== ERROR ===================');
-            console.log(message);
-            console.log('============================================');
             // Switch for specific errors
             switch(obj.number){
                 case 4:
@@ -2759,6 +2756,11 @@ function parseServerMessage(message){
                     break;
                 case 28:
                     throwError('You are already in the requested channel.');
+                    break;
+                default:
+                    console.log('================== ERROR ===================');
+                    console.log(message);
+                    console.log('============================================');
                     break;                
             }
             break;
