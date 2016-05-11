@@ -501,6 +501,31 @@ function updateStatus(character, status, statusmsg){
     });
 }
 
+function updateTypingStatus(character, status){
+    // Find any open PM channels for this character.
+    if(App.state.openPMs.indexOf(character) !== -1){
+        var statusSpan = App.characters[character].pms.buttonDom.find('#typingstatus');
+        if(status === 'typing'){
+            statusSpan.removeClass();
+            statusSpan.addClass('fa fa-keyboard-o fa-spin');
+            statusSpan.fadeIn();
+        }
+        else if(status === 'paused'){
+            statusSpan.removeClass();
+            statusSpan.addClass('fa fa-keyboard-o');
+            statusSpan.fadeIn();
+        }
+        else if(status === 'clear'){
+            statusSpan.removeClass();
+            statusSpan.addClass('fa fa-keyboard-o');
+            statusSpan.fadeOut();
+        }
+        else {
+            throwError('Sent erroneous typing status: ' + JSON.stringify(status));
+        }        
+    }
+}
+
 function characterWentOffline(character){
     // Remove this user's entry in any channel user lists and remove their userentry from the doms.
     var removed;
@@ -962,6 +987,9 @@ function receivePM(character, message, sender){
     if(sender !== App.user.loggedInAs && (App.state.selectedChannel !== 'pm' || App.state.selectedPM !== sender)){
         pushFeedItem(App.consts.feed.types.pm, message, false, true, sender);
     }
+    
+    // typing status
+    updateTypingStatus(character, 'clear');
 }
 
 /**
@@ -2719,7 +2747,16 @@ function createDomPMContents(){
 }
 
 function createDomPMButton(character){
-    return $('<div id="pm-' + stripWhitespace(character) + '" ' + 'class="fabutton pm" title="' + character + '"><img id="data" src="https://static.f-list.net/images/avatar/' + escapeHtml(character).toLowerCase() + '.png" title="' + character + '"/></div>');
+    var domMain = $('<div id="pm-' + stripWhitespace(character) + '" class="fabutton pm" title="' + character + '"></div>');
+    
+    var domImage = $('<img id="data" class="img-rounded" src="https://static.f-list.net/images/avatar/' + escapeHtml(character).toLowerCase() + '.png" title="' + character + '"/>');
+    domMain.append(domImage);
+    
+    var domTypingStatus = $('<span id="typingstatus" class="fa fa-keyboard-o"></span>');
+    domMain.append(domTypingStatus);
+    domTypingStatus.hide();
+    
+    return domMain;
 }
 
 /* Others */
@@ -2739,7 +2776,7 @@ function createDomUserEntry(name, gender, status, statusmsg){
     }
 
     domContainer.append('<div class="nameplate" style="color: ' + genderColour + '" title="' + statusmsg + '">' + name + '</div>');
-
+    
     return domContainer;
 }
 
@@ -3155,7 +3192,7 @@ function parseServerMessage(message){
             break;
         case 'TPN':
             // A user informs us of their typing status.
-            console.log(message);
+            updateTypingStatus(obj.character, obj.status);
             break;
         case 'UPT':
             // Informs the client of the server's self-tracked online time and a few other bits of information.

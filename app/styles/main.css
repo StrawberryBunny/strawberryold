@@ -681,6 +681,10 @@ html, body {
     padding-right: 4px;
 }
 
+.userentry .fa-keyboard-o {
+    padding-left: 4px;
+}
+
 .message {
     display: block;
     background-color: #333333;
@@ -728,6 +732,13 @@ html, body {
 
 .fabuttonselected {
     background-color: #222222;
+}
+
+.fabutton .fa-keyboard-o {
+    font-size: 18px;
+    position: absolute;
+    right: 0px;
+    top: 0px;    
 }
 
 
