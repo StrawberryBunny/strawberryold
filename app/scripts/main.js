@@ -128,7 +128,16 @@ var App = {
             settings:   { name: 'settings',     title: 'Settings',          icon: 'fa-gears',                   show: 'toolShowSettings' },
             logout:     { name: 'logout',       title: 'Logout',            icon: 'fa-sign-out',                show: 'toolShowLogout' }
         },
-        channelListScrollingSpeed: 25
+        channelListScrollingSpeed: 25,
+        feed: {
+            types: {
+                info: 'info',
+                friendinfo: 'friendinfo',
+                bookmarkinfo: 'bookmarkinfo',
+                error: 'error',
+                pm: 'pm'
+            }
+        }
     },
     serverVars: {
         chat_max: -1,
@@ -170,12 +179,12 @@ var App = {
                 
                 for(var i = 0; i < App.commands.length; i++){
                     if(App.commands[i]['name'] === e){
-                        pushFeedItem('info', '[b]' + escapeHtml(App.commands[i]['name']) + '[/b][ul][li][i][color=cyan]Usage[/color][/i]: ' + escapeHtml(App.commands[i]['usage']) + '[/li][li][i][color=cyan]Description[/color][/i]: ' + escapeHtml(App.commands[i]['description']) + '[/li][li][i][color=cyan]Examples[/color][/i]: ' + escapeHtml(App.commands[i]['examples']) + '[/li][li][i][color=cyan]Aliases[/color][/i]: ' + escapeHtml(App.commands[i]['alias']) + '[/li][/ul]', true);
+                        pushFeedItem(App.consts.feed.types.info, '[b]' + escapeHtml(App.commands[i]['name']) + '[/b][ul][li][i][color=cyan]Usage[/color][/i]: ' + escapeHtml(App.commands[i]['usage']) + '[/li][li][i][color=cyan]Description[/color][/i]: ' + escapeHtml(App.commands[i]['description']) + '[/li][li][i][color=cyan]Examples[/color][/i]: ' + escapeHtml(App.commands[i]['examples']) + '[/li][li][i][color=cyan]Aliases[/color][/i]: ' + escapeHtml(App.commands[i]['alias']) + '[/li][/ul]', true);
                         return true;
                     }
                 }		
                 
-                pushFeedItem('error', 'There is no command called ' + e, true);
+                pushFeedItem(App.consts.feed.types.error, 'There is no command called \'' + e + '\'', true);
                 
                 return false;			
             }
@@ -192,7 +201,7 @@ var App = {
                     msg += '[li]/' + App.commands[i].name + '[/li]';
                 }
                 msg += '[/ul]';
-                pushFeedItem('info', msg, true);
+                pushFeedItem(App.consts.feed.types.info, msg, true);
             }
         },
         {
@@ -300,14 +309,14 @@ var App = {
                 var split = e.split(' ');
                 
                 if(split[0] === 'get'){
-                    pushFeedItem('info', 'Your status is currently: ' + App.characters[App.user.loggedInAs].status + ' - ' + App.characters[App.user.loggedInAs].statusmsg, true);
+                    pushFeedItem(App.consts.feed.types.info, 'Your status is currently: ' + App.characters[App.user.loggedInAs].status + ' - ' + App.characters[App.user.loggedInAs].statusmsg, true);
                 }
                 else if(split[0] === 'set'){
                     if(split.length > 1 && split[1].length > 0){
                         var status = split[1].toLowerCase();
                         if(status !== 'online' && status !== 'looking' && status !== 'busy' && status !== 'away' && status !== 'dnd'){
                             // incorrect status.
-                            pushFeedItem('error', 'The status you entered is not an acceptable value.', true);
+                            pushFeedItem(App.consts.feed.types.error, 'The status you entered is not an acceptable value.', true);
                             App.commands[0].func('status');
                             return false;
                         }
@@ -372,7 +381,7 @@ function checkForReadyStatus(){
 }
 
 function throwError(message){
-    pushFeedItem('error', message, true);
+    pushFeedItem(App.consts.feed.types.error, message, true);
 }
 
 function sendChatMessageToActiveWindow(message){
@@ -421,7 +430,7 @@ function sendChatMessage(message, channel){
             errorMessage += '[li]' + bb.errorQueue[i] + '[/li]';        
         }
         errorMessage += '[/ul]';
-        pushFeedItem('error', errorMessage, true);
+        pushFeedItem(App.consts.feed.types.error, errorMessage, true);
         return false;
     }
 
@@ -453,7 +462,7 @@ function sendPM(message, character){
             errorMessage += '[li]' + bb.errorQueue[i] + '[/li]';        
         }
         errorMessage += '[/ul]';
-        pushFeedItem('error', errorMessage, true);
+        pushFeedItem(App.consts.feed.types.error, errorMessage, true);
         return false;
     }
     
@@ -473,7 +482,7 @@ function updateStatus(character, status, statusmsg){
 
     // If us
     if(character === App.user.loggedInAs){
-        pushFeedItem('info', 'Your status has been updated successfully.');
+        //pushFeedItem(App.consts.feed.types.info, 'Your status has been updated successfully.'); ( No need for feed item anymore. Status panel gives good feedback.");
         App.tools['status'].progressIcon.removeClass();
         App.tools['status'].progressIcon.addClass('fa fa-check');
     }
@@ -526,13 +535,13 @@ function characterWentOffline(character){
     var shout = false;
     if(typeof App.user.friendsList[App.user.loggedInAs] !== 'undefined'){
         if(App.user.friendsList[App.user.loggedInAs].indexOf(character) !== -1){
-            pushFeedItem('friendinfo', 'Your friend ' + character + ' has gone offline.', false, true);
+            pushFeedItem(App.consts.feed.types.friendInfo, 'Your friend ' + character + ' has gone offline.', false, true);
             shout = true;
         }
     }
     if(!shout && typeof App.user.bookmarks !== 'undefined'){
         if(App.user.bookmarks.indexOf(character) !== -1){
-            pushFeedItem('bookmarkinfo', 'Your bookmark ' + character + ' has gone offline.', false, true);
+            pushFeedItem(App.consts.feed.types.bookmarkinfo, 'Your bookmark ' + character + ' has gone offline.', false, true);
         }
     }
 }
@@ -698,7 +707,7 @@ function closeChannel(name){
     if(App.state.openChannels.indexOf(name) === -1){
         //console.log('Error: Trying to close a channel that isn\'t open: ' + name);
         console.log(JSON.stringify(App.state.openChannels));
-        pushFeedItem('error', 'Tried to close channel ' + name + ' when it isn\'t open.', true);
+        pushFeedItem(App.consts.feed.types.error, 'Tried to close channel ' + name + ' when it isn\'t open.', true);
         return;
     }
 
@@ -774,7 +783,7 @@ function characterLeftChannel(character, channel){
     var removed = channels[channel].users.splice(character, 1);
     if(typeof removed === 'undefined'){
         // Tried to remove a character from a room but they weren't in there? Wtf.
-        pushFeedItem('error', 'Server informed us that ' + character + ' left ' + channel + ' but we did not have them listed.', true);
+        pushFeedItem(App.consts.feed.types.error, 'Server informed us that ' + character + ' left ' + channel + ' but we did not have them listed.', true);
         return;
     }
     
@@ -904,7 +913,7 @@ function closePM(character){
     if(App.state.openPMs.indexOf(character) === -1){
         console.log('Error: Trying to close a PM that isn\'t open: ' +character);
         console.log(JSON.stringify(App.state.openPMs));
-        pushFeedItem('error', 'Tried to close PM for ' + character + ' when it isn\'t open.', true);
+        pushFeedItem(App.consts.feed.types.error, 'Tried to close PM for ' + character + ' when it isn\'t open.', true);
         return;
     }
 
@@ -946,6 +955,11 @@ function receivePM(character, message, sender){
     // Create dom
     var dom = createDomMessage(sender, message);
     App.characters[character].pms.messageDom.append(dom);
+    
+    // Feed
+    if(sender !== App.user.loggedInAs){
+        pushFeedItem(App.consts.feed.types.pm, message, false, true, sender);
+    }
 }
 
 /**
@@ -954,11 +968,11 @@ function receivePM(character, message, sender){
 
 /* Status */
 function updateStatusForm(){
-    App.tools['status'].dropdown.val(App.characters[App.user.loggedInAs].status.toLowerCase());
-    App.tools['status'].textarea.val(App.characters[App.user.loggedInAs].statusmsg);
-    App.tools['status'].progressIcon.removeClass();
-    App.tools['status'].progressIcon.addClass('fa fa-check');
-    App.tools['status'].progressIcon.fadeIn();
+    //App.tools['status'].dropdown.val(App.characters[App.user.loggedInAs].status.toLowerCase());
+    //App.tools['status'].textarea.val(App.characters[App.user.loggedInAs].statusmsg);
+    //App.tools['status'].progressIcon.removeClass();
+    //App.tools['status'].progressIcon.addClass('fa fa-check');
+    //App.tools['status'].progressIcon.fadeIn();
 }
 
 /* Channel List */
@@ -1037,14 +1051,14 @@ function channelListUpdated(){ // Called from parseServerMessage() when the publ
 }
 
 /* Feed */
-function pushFeedItem(type, message, showFeed, count){
+function pushFeedItem(type, message, showFeed, count, sender){
     // Process BBCODE
     var bb = XBBCODE.process({
         text: message
     });
 
     // Push message into queue
-    App.tools['feed'].queue.push([type, bb.html]);
+    App.tools['feed'].queue.push([type, bb.html, sender]);
 
     // If the feed is open, display the message immediately.
     if(App.state.currentTool === 'feed' && App.tools['feed'].currentlyDisplaying === false){
@@ -1091,7 +1105,7 @@ function displayNextFeedMessage(iterate){
 
     // Create dom
     var feedEntry = App.tools['feed'].queue.shift();
-    var domMsg = createDomToolFeedMessage(feedEntry[0], feedEntry[1]);
+    var domMsg = createDomToolFeedMessage(feedEntry[0], feedEntry[1], feedEntry[2]);
 
     // Append dom to feed content.
     App.tools['feed'].messagePush.append(domMsg);
@@ -1644,7 +1658,7 @@ function postForSetMemo(characterID, note){
                 prog.show();  
                 
                 // Feed
-                pushFeedItem('error', 'There was a problem saving the memo: ' + data.error, true);
+                pushFeedItem(App.consts.feed.types.error, 'There was a problem saving the memo: ' + data.error, true);
             }
             else {
                 // Change the progress to show the result.
@@ -2032,12 +2046,14 @@ function createDomToolStatus(){
     var btnReset = $('<button id="btnstatusreset" type="submit" class="btn btn-default">Reset</button>');
     botContent.append(btnReset);
     btnReset.click(function(){
-        updateStatusForm();
+        App.tools['status'].dropdown.val(App.characters[App.user.loggedInAs].status.toLowerCase());
+        App.tools['status'].textarea.val(App.characters[App.user.loggedInAs].statusmsg);
     });
     
     var domCont = $('<div></div>');
     var domInProgressConfirm = $('<span id="statusprogress" class="fa fa-spinner fa-spin"></span>');
     domCont.append(domInProgressConfirm);
+    domInProgressConfirm.hide();
     var btnUpdate = $('<button id="btnstatusupdate" type="submit" class="btn btn-default">Update</button>');
     domCont.append(btnUpdate);
     btnUpdate.click(function(){
@@ -2052,9 +2068,10 @@ function createDomToolStatus(){
         // Disable Update button
         App.tools['status'].updatebutton.addClass('disabled');
 
-        // Timeout
+        // Timeouts
         setTimeout(function(){
-            App.tools['status'].updatebutton.removeClass('disabled');
+            App.tools['status'].progressIcon.fadeOut();
+            App.tools['status'].updatebutton.removeClass('disabled');           
         }, 5000);
     });
     
@@ -2165,49 +2182,60 @@ function createDomToolFeed(){
     App.tools['feed'].messagePush = domMessages;
 }
 
-function createDomToolFeedMessage(type, message){
+function createDomToolFeedMessage(type, message, sender){
     // Create a message dom for this message.
     var domMsg = $('<div class="feedmessage"></div>');
 
-    // Top bar
-    var topBar = $('<div class="feedmessagetopbar"></div>');
-    domMsg.append(topBar);
+    if(type !== 'pm'){
+        // Top bar
+        var topBar = $('<div class="feedmessagetopbar"></div>');
+        domMsg.append(topBar);
 
-    // Title
-    var typeText = type;
-    switch(type){
-        case 'info':
-        case 'friendinfo':
-        case 'bookmarkinfo':
-            typeText = getHumanReadableTimestampForNow();
-            break;
-        case 'error':
-            typeText = 'Error';
-            break;
-    }
+        // Title
+        var typeText = getHumanReadableTimestampForNow() + ': ' + (type === App.consts.feed.types.pm ? sender : (type.charAt(0).toUpperCase() + type.substr(1)));
+        var domTitle = $('<span class="feedtitle">' + typeText + '</span>');
+        topBar.append(domTitle);
 
-
-    var title = $('<span class="feedtitle">' + typeText + '</span>');
-    topBar.append(title);
-
-    // Close button
-    var btnClose = $('<span class="famuted fa fa-times"></div>');
-    topBar.append(btnClose);
-    btnClose.click(function(){
-        $(this).parent().parent().slideUp('slow', function(){
-            $(this).remove();
+        // Close button
+        var btnClose = $('<span class="famuted fa fa-times"></div>');
+        topBar.append(btnClose);
+        btnClose.click(function(){
+            $(this).parent().parent().slideUp('slow', function(){
+                $(this).remove();
+            });
         });
-    });
 
-    // Message
-    var msg = $('<div class="feedmessagemessage">' + message + '</div>');
-    domMsg.append(msg);
+        // Message
+        var msg = $('<div class="feedmessagemessage">' + message + '</div>');
+        domMsg.append(msg);
 
-    // Extra classes
-    switch(type){
-        case 'error':
-            domMsg.addClass('error');
-            break;
+        // Extra classes
+        switch(type){
+            case 'error':
+                domMsg.addClass('error');
+                break;
+            case 'pm':
+                domMsg.addClass('pm');
+                break;
+        }
+    }
+    else {
+        var domPM = $('<div class="feedpmcontainer"></div>');
+        domMsg.append(domPM);
+        
+        var domAvatar = $('<img class="avatar" title="' + sender + '" src="https://static.f-list.net/images/avatar/' + escapeHtml(sender).toLowerCase() + '.png">');
+        domPM.append(domAvatar);
+        
+        var domMessage = $('<div class="feedpmmessage"></div>');
+        domPM.append(domMessage);
+        
+        var domUserEntry = createDomUserEntry(sender, App.characters[sender].gender, App.characters[sender].status, App.characters[sender].statusmsg);
+        domMessage.append(domUserEntry);
+        
+        domMessage.append(': ' + message);
+        
+        // Extra classes
+        domMsg.addClass('pm');
     }
 
     // return
@@ -2571,7 +2599,7 @@ function openWebSocket(account, ticket, characterName){
     App.connection.onerror = function(error){
         // TODO (Do we need to take action?)
         console.log('WebSocket error: ' + JSON.stringify(error));
-        pushFeedItem('error', 'WebSocket error: ' + error, true);
+        pushFeedItem(App.consts.feed.types.error, 'WebSocket error: ' + error, true);
     };
 
     App.connection.onmessage = function(e){
@@ -2581,7 +2609,7 @@ function openWebSocket(account, ticket, characterName){
     App.connection.onclose = function(e){
         var msg = 'WebSocket closed with code: ' + e.code + ', reason: ' + e.reason + ', wasClean: ' + e.wasClean;
         console.log(msg);
-        pushFeedItem('error', msg, true);
+        pushFeedItem(App.consts.feed.types.error, msg, true);
         
         startAgain();
         var alertDom = createDomAlert(msg);
@@ -2618,7 +2646,7 @@ function parseServerMessage(message){
             break;
         case 'BRO':
             // Incoming admin broadcast
-            pushFeedItem('info', '<b>Admin Broadcast</b>: ' + obj.message, true);
+            pushFeedItem(App.consts.feed.types.info, '<b>Admin Broadcast</b>: ' + obj.message, true);
             break;
         case 'CDS':
             // A channel's description has changed. (Also sent in response to JCH)
@@ -2660,7 +2688,7 @@ function parseServerMessage(message){
             channels[obj.name].title = obj.title;            
         
             // Receiving an invite to a channel.
-            pushFeedItem('info', obj.sender + ' has invited you to [session=' + obj.title + ']' + obj.name + '[/session]', false, true);
+            pushFeedItem(App.consts.feed.types.info, obj.sender + ' has invited you to [session=' + obj.title + ']' + obj.name + '[/session]', false, true);
             break;
         case 'CBU':
             // Removes a user from a channel and prevents them from entering. (This just happened or.. what?)
@@ -2684,7 +2712,7 @@ function parseServerMessage(message){
             break;
         case 'CON':
             // The number of connected users. Received after connecting and identifying.
-            pushFeedItem('info', 'There are currently ' + obj.count + ' users logged in.', false);
+            pushFeedItem(App.consts.feed.types.info, 'There are currently ' + obj.count + ' users logged in.', false);
             App.state.logInReadyInfo.initialCharacterCount = obj.count;
             break;
         case 'COR':
@@ -2729,7 +2757,7 @@ function parseServerMessage(message){
             break;
         case 'HLO':
             // Server hello command. Tells which server version is running and who wrote it.
-            pushFeedItem('info', obj.message, false, true);
+            pushFeedItem(App.consts.feed.types.info, obj.message, false, true);
             break;
         case 'ICH':
             // Initial channel data. Received in response to JCH along with CDS. (userlist, channelname, mode)
@@ -2785,10 +2813,10 @@ function parseServerMessage(message){
                 case 'delete': // Acknoledges the deletion of an ignore.
                     break;
                 case 'list': // ?
-                    pushFeedItem('info', 'Received an IGN with action: list', false, true);
+                    pushFeedItem(App.consts.feed.types.info, 'Received an IGN with action: list', false, true);
                     break;
                 case 'notify': // ?
-                    pushFeedItem('info', 'Received an IGN with action: notify', false, true);
+                    pushFeedItem(App.consts.feed.types.info, 'Received an IGN with action: notify', false, true);
                     break;
             }
 
@@ -2835,7 +2863,7 @@ function parseServerMessage(message){
                 App.state.logInReadyInfo.listedCharacters++;
             }
 
-            pushFeedItem('info', 'Received character payload of ' + obj.characters.length + ' character' + (obj.characters.length > 1 ? 's' : '') + '.', false, true);
+            pushFeedItem(App.consts.feed.types.info, 'Received character payload of ' + obj.characters.length + ' character' + (obj.characters.length > 1 ? 's' : '') + '.', false, true);
 
             // If the amount of characters now matches or is greater than con, we've received the full user list.
             if(App.state.logInReadyInfo.listedCharacters >= App.state.logInReadyInfo.initialCharacterCount){
@@ -2862,10 +2890,10 @@ function parseServerMessage(message){
             
             if(obj.identity !== App.user.loggedInAs){
                 if(App.user.friendsList[App.user.loggedInAs].indexOf(obj.identity) !== -1){
-                    pushFeedItem('friendinfo', 'Your friend ' + obj.identity + ' has come online.', false, true);
+                    pushFeedItem(App.consts.feed.types.fiendinfo, 'Your friend ' + obj.identity + ' has come online.', false, true);
                 }
                 else if(App.user.bookmarks.indexOf(obj.identity) !== -1){
-                    pushFeedItem('bookmarkinfo', 'Your bookmark ' + obj.identity + ' has come online.', false, true);
+                    pushFeedItem(App.consts.feed.types.bookmarkinfo, 'Your bookmark ' + obj.identity + ' has come online.', false, true);
                 }
             }
             
@@ -2908,7 +2936,7 @@ function parseServerMessage(message){
             break;
         case 'RTB':
             // Real-time bridge. Indicates the user received a note or message, right at the very moment this is received.
-            pushFeedItem('info', 'Real-Time Bridge - Received ' + obj.type + ' from ' + obj.character + '.', false, true);
+            pushFeedItem(App.consts.feed.types.info, 'Real-Time Bridge - Received ' + obj.type + ' from ' + obj.character + '.', false, true);
             break;
         case 'SFC':
             // Alerts admins and chatops of an issue.
@@ -2935,7 +2963,7 @@ function parseServerMessage(message){
 				msg += '[li]Max simultaneous users since last restart: ' + obj.maxusers + '[/li]';
 				msg += '[li]Accepted Connections: ' + obj.accepted + '[/li]';
             msg += '[/ul]';
-            pushFeedItem('info', msg, false, true);
+            pushFeedItem(App.consts.feed.types.info, msg, false, true);
             
             // Server info retrieved
             App.state.logInReadyInfo.serverInfoRetrieved = true;
@@ -2954,7 +2982,7 @@ function parseServerMessage(message){
         default:
             msg = 'Server received an unhandled message: ' + message;
             console.log(msg);
-            pushFeedItem('error', msg, true);
+            pushFeedItem(App.consts.feed.types.error, msg, true);
             break;
     }
 }

@@ -361,6 +361,29 @@ html, body {
     color: #ea4933;
 }
 
+.pm {
+    display: block;
+    background-color: #2d4461;
+    white-space: pre-wrap;
+    padding: 5px;
+    overflow: hidden;
+}
+
+.feedpmcontainer .avatar {
+    float: left;
+    width: 64px;
+    height: 64px;
+    margin-right: 20px;
+    margin-bottom: 5px;
+}
+
+.feedpmcontainer .userentry {
+    display: inline-flex;
+}
+
+
+
+
 /* Tool Panel - Status */
 
 #statusavatar {
