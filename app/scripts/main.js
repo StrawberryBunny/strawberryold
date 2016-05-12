@@ -300,6 +300,9 @@ var App = {
                 }
                 
                 targetViewerFor(e);
+                if(App.state.currentTool !== 'viewer'){
+                    toggleTool('viewer');
+                }
                 return true;
             }
         },
