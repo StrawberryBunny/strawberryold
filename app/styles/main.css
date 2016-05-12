@@ -675,6 +675,76 @@ html, body {
     padding: 5px;
 }
 
+/* Tool Pictures */
+.toolpictures .tooltopbar {
+    flex-direction: row;
+    justify-content: space-between;
+    padding-left: 10px;
+}
+.toolpictures .tooltopbar input {
+    font-size: 12px;
+    width: 100%;
+}
+
+.toolpicturesscroller {
+    overflow-y: auto;
+    height: calc(100% - 48px);
+}
+
+.toolpicturesscrollercontent {
+    padding: 10px;    
+}
+
+.toolpicturesscrollercontent p {
+    text-align: center;
+    color: #888888;
+    font-style: italic;
+}
+
+.picturesentry {
+    display: block;
+    padding: 10px;
+    background-color: #333333;
+    text-align: left;
+}
+
+.picturesentry:not(:last-child) {
+    margin-bottom: 10px;
+}
+
+.picturesentry .img-responsive {
+    border-style: solid;
+    border-color: #000000;
+    border-width: 2px;
+    margin-top: 20px;
+}
+
+.picturesentry .userentry {
+    display: inline-flex;
+}
+
+.picturesentry div {
+    display: inline;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+.picturesentrybuttons {
+    float: right;
+    right: 10px;
+    top: 5px;
+} 
+
+.picturesentrybuttonswrapper {
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+}
+
+.picturesentrybuttonswrapper span {
+    margin-left: 5px;
+} 
+
 /* Global */
 
 .userentry {
@@ -827,4 +897,18 @@ a:active {
 
 .iconlink {
     cursor: pointer;
+}
+
+.urllink {
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.urllink:hover {
+    color: #ea4933;
+    text-decoration: none;
+}
+
+.urllink .fa-image {
+    margin-right: 3px;
 }

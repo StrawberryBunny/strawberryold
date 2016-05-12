@@ -504,7 +504,13 @@ var XBBCODE = (function() {
 				}
 				else {
 					//return '<span class="fa fa-chain" style="margin-right: 3px"></span><a href="' + url + '" target="_blank"> ' + content + '</a>' ; // EDIT arget="_blank"
-					return '<span class="fa fa-link" title="' + url + '"></span><a href="' + url + '" target="_blank" title="' + url + '">' + content + '</a>';
+                    var isImage = isImageUrl(url);
+                    // FIX for imgur's gifv links.
+                    if(url.substr(url.length - 4) === 'gifv'){
+                        url = url.substr(0, url.length - 1);
+                    }
+                    
+					return '<span class="urllink" title="' + url + '"><span class="fa ' + (isImage ? 'fa-image' : 'fa-link') + '"></span>' + content + '</span>';
 				}               
             },
             closeTag: function(params,content) {
@@ -888,4 +894,8 @@ function youtube_parser(url){
     var regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#\&\?]*).*/;
     var match = url.match(regExp);
     return (match&&match[7].length==11)? match[7] : false;
+}
+
+function isImageUrl(url) {
+    return(url.match(/\.(jpeg|jpg|gif|png|gifv)$/) != null);
 }

@@ -124,8 +124,9 @@ var App = {
             status:     { name: 'status',       title: 'Status',            icon: 'fa-list-alt',                show: 'toolShowStatus' },
             channels:   { name: 'channels',     title: 'Channel List',      icon: 'fa-th',                      show: 'toolShowChannelList' },
             viewer:     { name: 'viewer',       title: 'Viewer',            icon: 'fa-eye',                     show: 'toolShowViewer' },
+            pictures:   { name: 'pictures',     title: 'Pictures',          icon: 'fa-image',                   show: 'toolShowPictures' },
             friends:    { name: 'friends',      title: 'Friends',           icon: 'fa-users',                   show: 'toolShowFriends' },
-            pms:        { name: 'pms',          title: 'Private Messages',  icon: 'fa-comments',                show: 'toolShowPMs' },
+            pms:        { name: 'pms',          title: 'Private Messages',  icon: 'fa-comments',                show: 'toolShowPMs' },            
             info:       { name: 'info',         title: 'Info',              icon: 'fa-question',                show: 'toolShowInfo' },
             settings:   { name: 'settings',     title: 'Settings',          icon: 'fa-gears',                   show: 'toolShowSettings' },
             logout:     { name: 'logout',       title: 'Logout',            icon: 'fa-sign-out',                show: 'toolShowLogout' }
@@ -277,13 +278,8 @@ var App = {
                 if(App.state.selectedChannel === ''){
                     return false;
                 }
-                   
-                if(App.state.selectedChannel !== 'pm'){
-                    sendChatMessage(e, App.state.selectedChannel);
-                }
-                else {
-                    sendPM(e, App.state.selectedPM);
-                }
+                
+                sendChatMessageToActiveWindow(e, true);
                 
                 return true;
             }           
@@ -417,20 +413,13 @@ function throwError(message){
     pushFeedItem(App.consts.feed.types.error, message, true);
 }
 
-function sendChatMessageToActiveWindow(message){
+function sendChatMessageToActiveWindow(message, skipCommandCheck){
     // Catch commands.
-    if(message.charAt(0) === '/'){
+    if(!skipCommandCheck && message.charAt(0) === '/'){
         var split = message.split(' ');
         var command = split[0].substr(1);
         
         for(var i = 0; i < App.commands.length; i++){
-            // special case /me's
-            /*if(App.commands[i].name === 'me'){                     
-                if(command === "me" || command === "me'" || command === "me's"){
-                    return App.commands[i].func(message);
-                }
-            }*/
-            
             if(App.commands[i].name === command){
                 return App.commands[i].func(command !== 'me' ? message.substring(command.length + 2) : message);
             }
@@ -444,26 +433,22 @@ function sendChatMessageToActiveWindow(message){
          
         return false;
     }
-    else if(App.state.selectedChannel !== 'pm'){
-        return sendChatMessage(message, App.state.selectedChannel);
-    }
-    else {
-        return sendPM(message, App.state.selectedPM);
-    }
+    
+    return sendMessage(message, App.state.selectedChannel === 'pm', App.state.selectedChannel === 'pm' ? App.state.selectedPM : App.state.selectedChannel);
 }
 
-function sendChatMessage(message, channel){
+function sendMessage(message, isPM, chanchar){
     // Check for bullcrap
     var strippedMessage = stripWhitespace(message);
-    if(message === null || typeof message === 'undefined' || message === '' || strippedMessage === '' || strippedMessage.length === 0 || channel === '' || channel.length === 0){
+    if(message === null || typeof message === 'undefined' || message === '' || strippedMessage === '' || strippedMessage.length === 0 || chanchar === '' || chanchar.length === 0){
         return false;
     }
-
-    // Check for malformed BBCODE
+    
+    // Check for malformed bbcode
     var bb = XBBCODE.process({
         text: message
     });
-
+    
     if(bb.error){
         var errorMessage = '[ul]';
         for(var i = 0; i < bb.errorQueue.length; i++){
@@ -482,46 +467,22 @@ function sendChatMessage(message, channel){
     else if(message.substr(0, 4) === "/me'"){
         serverMessage = '/me ' + message.substr(3);
     }
-
-    // Send message to server
-    sendMessageToServer('MSG { "channel": "' + channel + '", "message": "' + escapeJson(serverMessage) + '" }');
-
-    // Add the message to the chat window
-    receiveMessage(channel, App.user.loggedInAs, message);
     
-    // Return success
-    return true;
-}
+    if(isPM){
+        // Send message to server
+        sendMessageToServer('PRI { "recipient": "' + chanchar + '", "message": "' + escapeJson(serverMessage) + '" }');
+        
+        // Add the message to the chat window
+        receivePM(chanchar, message, App.user.loggedInAs);
+    }
+    else {
+        // Send message to server
+        sendMessageToServer('MSG { "channel": "' + chanchar + '", "message": "' + escapeJson(serverMessage) + '" }');
 
-function sendPM(message, character){
-    // Check for bullcrap
-    var strippedMessage = stripWhitespace(message);
-    if(message === '' || strippedMessage === '' || strippedMessage.length === 0 || character === '' || character.length === 0){
-        return false;
+        // Add the message to the chat window
+        receiveMessage(chanchar, App.user.loggedInAs, message);
     }
     
-    // Check for malformed BBCODe
-    var bb = XBBCODE.process({
-        text: message
-    });
-    
-    if(bb.error){
-        var errorMessage = '[ul]';
-        for(var i = 0; i < bb.errorQueue.length; i++){
-            errorMessage += '[li]' + bb.errorQueue[i] + '[/li]';        
-        }
-        errorMessage += '[/ul]';
-        pushFeedItem(App.consts.feed.types.error, errorMessage, true);
-        return false;
-    }
-    
-    // Send message to server
-    sendMessageToServer('PRI { "recipient": "' + character + '", "message": "' + escapeJson(message) + '" }');
-    
-    // Add the message to the chat window
-    receivePM(character, message, App.user.loggedInAs);
-    
-    // result
     return true;
 }
 
@@ -823,8 +784,14 @@ function receiveMessage(channel, character, message){
     }
     channels[channel].messages.push([character, message]);
 
+    // Check for anything we want to affect
+    
     // Create dom
     var dom = createDomMessage(character, message);
+    
+    // Check for dom interupts.
+    checkForDomInterupts(dom, false, channel, character);
+    
     channels[channel].messageDom.append(dom);
 }
 
@@ -894,6 +861,24 @@ function turnOffSelectedChannel(){
 
     // Deselect the channel's button
     channels[App.state.selectedChannel].buttonDom.removeClass('fabuttonselected');
+}
+
+function checkForMessageInterupts(message){
+    
+}
+
+function checkForDomInterupts(dom, isPM, chanchar){
+    // Url links.
+    dom.children('.urllink').each(function(){
+        // If this url link is to a picture.
+        var url = $(this).attr('title');
+        var msg = $(this).text();
+        if(isImageUrl(url)){
+            // Push this item into the picture
+            pushImageToPictures(url, character, msg); 
+        }
+    });
+    
 }
 
 /**
@@ -1399,6 +1384,21 @@ function viewerUpdatePictures(data){
     }
 }
 
+/* Pictures */
+function pushImageToPictures(url, sender, message, showPictures){
+    var dom = createDomToolPicturesEntry(url, sender, message);
+    App.tools['pictures'].scrollerContent.append(dom);
+    if(showPictures && App.state.currentTool !== 'pictures'){
+        toggleTool('pictures');
+    }
+    
+    // Scroll pictures content to new element.
+    App.tools['pictures'].scroller.stop();
+    App.tools['pictures'].scroller.animate({
+        scrollTop: App.tools['pictures'].scrollerContent.height()
+    }, 2000);
+}
+
 /**
  * Tool Show Functions ==========================================================================================================
  * Fired from toggleTool(*) but only if the user clicked on a button to initiate it.
@@ -1429,6 +1429,10 @@ function toolShowPMs(){
 
 function toolShowFeed(){
     displayQueuedFeedMessages();
+}
+
+function toolShowPictures(){
+    
 }
 
 function toolShowInfo(){
@@ -1647,6 +1651,34 @@ function lengthInUtf8Bytes(str){
     // Matches only the 10.. bytes that are non-initial characters in a multi-byte sequence.
     var m = encodeURIComponent(str).match(/%[89ABab]/g);
     return str.length + (m ? m.length : 0);
+}
+
+function isImageUrl(url) {
+    return(url.match(/\.(jpeg|jpg|gif|png)$/) != null);
+}
+
+$.fn.selectRange = function(start, end) {
+    if(end === undefined) {
+        end = start;
+    }
+    return this.each(function() {
+        if('selectionStart' in this) {
+            this.selectionStart = start;
+            this.selectionEnd = end;
+        } else if(this.setSelectionRange) {
+            this.setSelectionRange(start, end);
+        } else if(this.createTextRange) {
+            var range = this.createTextRange();
+            range.collapse(true);
+            range.moveEnd('character', end);
+            range.moveStart('character', start);
+            range.select();
+        }
+    });
+};
+
+String.prototype.splice = function(idx, rem, str){
+    return this.slice(0, idx) + str + this.slice(idx + Math.abs(rem));
 }
 
 /**
@@ -1917,7 +1949,7 @@ function createDomMainChat(){
     createDomToolViewer();
     createDomToolFriendsList();
     createDomToolInfo();
-
+    createDomToolPictures();
     
 
     // ret
@@ -2544,7 +2576,7 @@ function createDomToolFeedMessage(type, message, sender){
             domTASend.click(function(){
                 var textArea = $(this).parent().find('.replytextarea');
                 var recipient = $(this).parent().parent().find('#data').attr('title');
-                sendPM(textArea.val(), recipient);
+                sendMessage(textArea.val(), true, recipient);
                 
                 // Disable the send button.
                 $(this).addClass('disabled');
@@ -2894,6 +2926,120 @@ function createDomToolInfo(){
     }
 }
 
+function createDomToolPictures(){
+    var domTitleBar = $('<div class="tooltopbar"></div>');
+    App.tools['pictures'].content.append(domTitleBar);
+    
+    var domInput = $('<input id="toolpicturesinput" type="text" placeholder="Add URLs here"></input>');
+    domTitleBar.append(domInput);
+    
+    var domBtnAdd = $('<span class="faicon fa fa-plus" title="Add Image"></span>');
+    domTitleBar.append(domBtnAdd);
+    domBtnAdd.click(function(){
+        var inputVal = $('#toolpicturesinput').val();
+        if(typeof inputVal === 'undefined' || inputVal.length === 0 || stripWhitespace(inputVal).length === 0){
+            console.log("Input val not workable: " + inputVal);
+            return;
+        }
+        
+        // Does the inputVal end with an image extension?
+        if(!isImageUrl(inputVal)){
+            return;
+        }
+        
+        // Try and load the image.
+        pushImageToPictures(inputVal, App.user.loggedInAs);
+    });
+    
+    var domScroller = $('<div class="toolpicturesscroller"></div>');
+    App.tools['pictures'].content.append(domScroller);
+    
+    var domContent = $('<div class="toolpicturesscrollercontent"></div>');
+    domScroller.append(domContent);
+    
+    var info = $('<p>When an [url] link ends in an image extension (I.E png, jpeg or gif), clicking on it will open images here in pictures. Only images from sites that allow hotlinking will work.</p>');
+    domContent.append(info);
+    
+    App.tools['pictures'].scroller = domScroller;
+    App.tools['pictures'].scrollerContent = domContent;
+}
+
+function createDomToolPicturesEntry(url, sender, message){
+    var domMain = $('<div class="picturesentry"></div>');
+   
+    var domButtons = $('<div class="picturesentrybuttons"></div>');
+    domMain.append(domButtons);
+    
+    var domButtonsWrapper = $('<div class="picturesentrybuttonswrapper"></div>');
+    domButtons.append(domButtonsWrapper);
+    
+    var domBtnShare = $('<span class="faicon fa fa-share-alt"></span>');
+    domButtonsWrapper.append(domBtnShare);
+    domBtnShare.click(function(){
+        var str = '[url=' + $(this).parent().parent().parent().find('.img-responsive').attr('src') + ']';
+        var strEnd = '[/url]';
+        var textVal = App.dom.mainTextEntry.val();
+        var caretPos = App.dom.mainTextEntry.prop('selectionStart');
+        
+        var selectionStart = App.dom.mainTextEntry.prop('selectionStart');
+        var selectionLength = App.dom.mainTextEntry.prop('selectionEnd') - selectionStart;
+        
+        // If nothing is selected
+        if(selectionLength === 0){
+            // Insert at caret position
+            var final = textVal.splice(caretPos, 0, str + strEnd);
+            App.dom.mainTextEntry.val(final);
+            
+            // Focus the text area.
+            App.dom.mainTextEntry.focus();
+            
+            // Place the caret in the middle of our [url] tags.
+            App.dom.mainTextEntry.selectRange(caretPos + str.length);
+        }
+        // else if a word/more is selected.
+        else {
+            // Retrieve the selected text. 
+            var selection = App.dom.mainTextEntry.val().substr(selectionStart, selectionLength);
+            
+            // Construct the string we're going to replce the selection with.
+            var strToAdd = str + selection + strEnd;
+            
+            // Replace the selection.
+            var newVal = App.dom.mainTextEntry.val().splice(selectionStart, selectionLength, strToAdd);
+            
+            // Set
+            App.dom.mainTextEntry.val(newVal);
+        }
+    });
+    
+    var domBtnOpen = $('<span class="faicon fa fa-external-link"></span>');
+    domButtonsWrapper.append(domBtnOpen);
+    domBtnOpen.click(function(){
+        window.open($(this).parent().parent().parent().find('.img-responsive').attr('src'), '_blank');
+    });   
+    
+    var domBtnClose = $('<span class="faicon fa fa-times"></span>');
+    domButtonsWrapper.append(domBtnClose);
+    domBtnClose.click(function(){
+        $(this).parent().parent().parent().slideUp(function(){
+            $(this).remove();
+        });
+    });
+    
+    var domTitle = $(createDomUserEntry(sender, App.characters[sender].gender, App.characters[sender].status, App.characters[sender].statusmsg));
+    domMain.append(domTitle);
+    
+    if(typeof message !== 'undefined'){
+        var domMessage = $('<div>: ' + message + '</div>');
+        domMain.append(domMessage);
+    }
+        
+    var domImage = $('<img class="img-responsive" src="' + url + '"/>');
+    domMain.append(domImage);
+    
+    return domMain;
+}
+
 /* Channels */
 function createDomChannelContents(){
     return $('<div class="channelmessages"></div>');
@@ -2985,7 +3131,7 @@ function createDomMessage(character, message){
     var bb = XBBCODE.process({
         text: message
     });
-    
+        
     domContainer.append('<div class="messagetext">' + bb.html + '</div>');
 
     return domContainer;
@@ -3512,17 +3658,15 @@ $(document).ready(function(){
     $(window).resize(function(){
         layout();
     });
-    
-    // Do we have a cookie?
-    var ckSession = cookie.get('session', 'none');
-    if(ckSession === 'none'){
-        // Create the login dom
-        $('body').append(createDomLogin());
-    }
-    else {
-        var split = ckSession.split('|');
-        logInComplete(split[0], split[1], split[2].split(','));
-    }
+       
+    // Changing channels with a key.
+    $(document).on('keyup', function(e){
+        // Ctrl+Space to switch channels.
+        if(e.which === 32 && e.ctrlKey){
+            // Go to next channel
+            gotoNextChannel();            
+        }
+    });
        
     // Future session links.
     $(document).on('click', '.sessionlink', function(e){
@@ -3553,12 +3697,37 @@ $(document).ready(function(){
         }
     });
     
-    // Changing channels with a key.
-    $(document).on('keyup', function(e){
-        // Ctrl+Space to switch channels.
-        if(e.which === 32 && e.ctrlKey){
-            // Go to next channel
-            gotoNextChannel();            
+    // Future urllink links
+    $(document).on('click', '.urllink', function(e){
+        var url = $(this).attr('title');
+        var msg = $(this).text();
+        if(isImageUrl(url)){
+            // Show in dreamer.
+            // Search for an owner of this url.
+            var owner = App.user.loggedInAs;
+            if(typeof $(this).parent().parent() !== 'undefined'){
+                var uEn = $(this).parent().parent().find('.userentry');
+                if(typeof uEn !== 'undefined'){
+                    owner = $(this).parent().parent().find('.userentry').attr('title');
+                }
+            }
+            
+            pushImageToPictures(url, owner, msg, true);
+        }
+        else {
+            // Open in new tab.
+            window.open(url, '_blank');
         }
     });
+    
+    // Do we have a cookie?
+    var ckSession = cookie.get('session', 'none');
+    if(ckSession === 'none'){
+        // Create the login dom
+        $('body').append(createDomLogin());
+    }
+    else {
+        var split = ckSession.split('|');
+        logInComplete(split[0], split[1], split[2].split(','));
+    }
 });
