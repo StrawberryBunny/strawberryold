@@ -528,9 +528,7 @@ var XBBCODE = (function() {
         },
 		"icon": {
 			openTag: function(params,content) {
-                var full = '<a href="https://www.f-list.net/c/' + escapeHtml(content).toLowerCase() + '" target="_blank">'
-                full += '<img class="avatar img-rounded" title="' + content + '"src="https://static.f-list.net/images/avatar/' + escapeHtml(content).toLowerCase() + '.png" width="100px" height="100px" />';
-                full += '</a>';
+                var full = '<img class="iconlink avatar img-rounded" title="' + content + '"src="https://static.f-list.net/images/avatar/' + escapeHtml(content).toLowerCase() + '.png" width="100px" height="100px" />';
                 return full;
             },
             closeTag: function(params,content) {
@@ -565,6 +563,15 @@ var XBBCODE = (function() {
 			},
 			displayContent: false
 		},
+        "user": {
+            openTag: function(params, content){
+                return '<span class="fa fa-user"></span><span id="' + content + '" class="userlink" style="margin-left: 3px;">';
+            },
+            closeTag: function(params, content){
+                return '</span>';
+            },
+            displayContent: true
+        },
 		"ee": {
 			openTag: function(params, content){
 				return '<img class="img-rounded" src="easteregg.gif"/>';

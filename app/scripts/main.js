@@ -3529,6 +3529,22 @@ $(document).ready(function(){
         joinChannel($(this).attr('id'));
     });
     
+    // Future user links
+    $(document).on('click', '.userlink', function(e){
+        targetViewerFor($(this).attr('id'));
+        if(App.state.currentTool !== 'viewer'){
+            toggleTool('viewer');
+        }
+    });
+    
+    // Future icon links
+    $(document).on('click', '.iconlink', function(e){
+        targetViewerFor($(this).attr('title'));
+        if(App.state.currentTool !== 'viewer'){
+            toggleTool('viewer');
+        }
+    });
+    
     // Future nameplate links.
     $(document).on('click', '.nameplate', function(e){
         targetViewerFor($(this).text());

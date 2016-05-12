@@ -814,3 +814,17 @@ a:active {
     color: #ea4933;
     text-decoration: none;
 }
+
+.userlink {
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.userlink:hover {
+    color: #ea4933;
+    text-decoration: none;
+}
+
+.iconlink {
+    cursor: pointer;
+}
