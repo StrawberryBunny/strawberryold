@@ -543,10 +543,6 @@ html, body {
     height: calc(100% - 48px);
 }
 
-.toolfriendsscrollercontent {
-    
-}
-
 .friendentry {
     display: flex;
     background-color: #333333;
