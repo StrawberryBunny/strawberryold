@@ -1496,6 +1496,47 @@ function layout(){
     }
 }
 
+function gotoNextChannel(){
+    // If no channels/pms open.
+    if(App.state.selectedChannel === ''){
+        return;
+    }
+    
+    // Find the current button.
+    var buttonDom;
+    var isPM = App.state.selectedChannel === 'pm';
+    if(isPM){
+        buttonDom = App.characters[App.state.selectedPM].pms.buttonDom;
+    }
+    else {
+        var isPublic = App.state.selectedChannel.substr(0, 3) !== 'ADH';
+        var channels = isPublic ? App.publicChannels : App.privateChannels;
+        buttonDom = channels[App.state.selectedChannel].buttonDom;
+    }
+    
+    // get the index of the button in the list.
+    var currentIndex = App.dom.buttonList.indexOf(buttonDom);
+    
+    // Calculate the new index.
+    var newIndex = currentIndex + 1;    
+    if(newIndex >= App.dom.buttonList.length){
+        newIndex = 0;
+    }
+    
+    // Read the channel/pm name from the new button and check for PMs.
+    var newButtonDom = App.dom.buttonList[newIndex];
+    isPM = newButtonDom.attr('id').split('-')[0] === 'pm';
+    var newName = newButtonDom.find('#data').attr('title');
+    
+    // Select the new channel/pm.
+    if(isPM){
+        selectPM(newName);
+    }
+    else {
+        selectChannel(newName);
+    }
+}
+
 /** 
  * Helper Functions ==========================================================================================================
  */
@@ -3500,41 +3541,8 @@ $(document).ready(function(){
     $(document).on('keyup', function(e){
         // Ctrl+Space to switch channels.
         if(e.which === 32 && e.ctrlKey){
-            // If no channels/pms open.
-            if(App.state.selectedChannel === ''){
-                return;
-            }
-            
             // Go to next channel
-            var buttonDom;
-            var isPM = App.state.selectedChannel === 'pm';
-            if(isPM){
-                buttonDom = App.characters[App.state.selectedPM].pms.buttonDom;
-            }
-            else {
-                var isPublic = App.state.selectedChannel.substr(0, 3) !== 'ADH';
-                var channels = isPublic ? App.publicChannels : App.privateChannels;
-                buttonDom = channels[App.state.selectedChannel].buttonDom;
-            }
-            
-            var currentIndex = App.dom.buttonList.indexOf(buttonDom);
-            var newIndex = currentIndex + 1;
-            
-            if(newIndex >= App.dom.buttonList.length){
-                newIndex = 0;
-            }
-            
-            var newButtonDom = App.dom.buttonList[newIndex];
-            isPM = newButtonDom.attr('id').split('-')[0] === 'pm';
-            var newName = newButtonDom.find('#data').attr('title');
-            
-            if(isPM){
-                selectPM(newName);
-            }
-            else {
-                selectChannel(newName);
-            }
-            
+            gotoNextChannel();            
         }
     });
 });
