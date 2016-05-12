@@ -204,6 +204,7 @@ var App = {
                 }
                 msg += '[/ul]';
                 pushFeedItem(App.consts.feed.types.info, msg, true);
+                return true;
             }
         },
         {
@@ -322,8 +323,10 @@ var App = {
                 
                 if(split[0] === 'get'){
                     pushFeedItem(App.consts.feed.types.info, 'Your status is currently: ' + App.characters[App.user.loggedInAs].status + ' - ' + App.characters[App.user.loggedInAs].statusmsg, true);
+                    return true;
                 }
-                else if(split[0] === 'set'){
+                
+                if(split[0] === 'set'){
                     if(split.length > 1 && split[1].length > 0){
                         var status = split[1].toLowerCase();
                         if(status !== 'online' && status !== 'looking' && status !== 'busy' && status !== 'away' && status !== 'dnd'){
@@ -338,6 +341,8 @@ var App = {
                         sendMessageToServer('STA {"status": "' + status + '", "statusmsg": "' + message + '" }');
                         return true;
                     }
+                    
+                    return false;
                 }
             }
         },
@@ -2679,7 +2684,6 @@ function createMemoSubmitClickCallback(recipientID){
 }
 
 function createDomToolFriendsList(){
-    
     // Title bar
     var domTitleBar = $('<div class="tooltopbar"></div>');
     App.tools['friends'].content.append(domTitleBar);
@@ -2687,6 +2691,25 @@ function createDomToolFriendsList(){
     // buttons
     var btnAll = $('<span class="faicon fa fa-check-circle-o" title="All Characters"></span>');
     domTitleBar.append(btnAll);
+    App.tools['friends'].allCharacters = btnAll;
+    btnAll.click(function(){
+        if($(this).hasClass('fa-check-circle-o')){
+            $(this).removeClass('fa-check-circle-o');
+            $(this).addClass('fa-check-circle');
+            $(this).attr('title', 'Current Charcter Only');
+        }
+        else {
+            $(this).removeClass('fa-check-circle');
+            $(this).addClass('fa-check-circle-o');
+            $(this).attr('title', 'All Characters');
+        }
+        
+        // Clean up existing dom.
+        App.tools['friends'].scrollerContent.empty();
+        
+        // Create new
+        createDomFriendsListContents();        
+    });
     
     // Scroller
     var domScroller = $('<div class="toolfriendsscroller"></div>');
@@ -2706,22 +2729,37 @@ function createDomToolFriendsList(){
 
 function createDomFriendsListContents(){
     // Sort our characters in alphabetical order
-    var order = [];
+    var keyOrder = [];
     for(var key in App.user.friendsList){
-        order.push(key);
-        // Sort this list of friends.
-        App.user.friendsList[key].sort();
+        keyOrder.push(key);
     }
-    order.sort();
-    
+    keyOrder.sort();
+        
     // Add the logged in character's friends first.
-    if(typeof App.user.friendsList[App.user.loggedInAs] !== 'undefined'){ // Ensure the logged in character actually has some friends.
-        for(var i = 0; i < App.user.friendsList[App.user.loggedInAs].length; i++){
-            var dom = createDomFriendsListEntry(App.user.loggedInAs, App.user.friendsList[App.user.loggedInAs][i]);
+    createDomFriendsListContentsForCharacter(App.user.loggedInAs);
+        
+    // If All Characters check box is selected..
+    if(App.tools['friends'].allCharacters.hasClass('fa-check-circle')){
+        for(var j = 0; j < keyOrder.length; j++){
+            if(keyOrder[j] !== App.user.loggedInAs){
+                createDomFriendsListContentsForCharacter(keyOrder[j]);
+            }
+        }
+    }
+}
+
+function createDomFriendsListContentsForCharacter(character){
+    if(typeof App.user.friendsList[character] !== 'undefined'){
+        // Sort this character's friends.
+        App.user.friendsList[character].sort();
+        
+        // Loop and create doms.
+        for(var i = 0; i < App.user.friendsList[character].length; i++){
+            var dom = createDomFriendsListEntry(character, App.user.friendsList[character][i]);
             App.tools['friends'].scrollerContent.append(dom);
             dom.click(function(){
                 targetViewerFor($(this).attr('title'));
-                toggleTool('viewer');               
+                toggleTool('viewer');
             });
         }
     }
@@ -2970,7 +3008,7 @@ function parseServerMessage(message){
         var obj = JSON.parse(message.substr(3));
     }
 
-    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'ORS', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'NLN', 'JCH', 'LCH', 'ERR', 'FLN', 'PRI', 'TPN', 'MSG'];
+    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'ORS', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'NLN', 'JCH', 'LCH', 'ERR', 'FLN', 'PRI', 'TPN', 'MSG', 'STA'];
     if(dontLog.indexOf(tag) === -1){
         console.log(message);
     }

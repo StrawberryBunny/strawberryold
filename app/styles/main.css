@@ -538,6 +538,15 @@ html, body {
 }
 
 /* Tool - Friends List */
+.toolfriendsscroller {
+    overflow-y: auto;
+    height: calc(100% - 48px);
+}
+
+.toolfriendsscrollercontent {
+    
+}
+
 .friendentry {
     display: flex;
     background-color: #333333;
