@@ -35,7 +35,7 @@
     },
     "rules": {
       "quotes": [
-        2,
+        0,
         "single"
       ],
       "no-trailing-spaces": 0,
@@ -46,7 +46,21 @@
       "camelcase": 0,
       "no-unused-vars": 0,
       "space-infix-ops": 0,
-      "no-loop-func": 0
+      "no-loop-func": 0,      
+      "comma-spacing": 0,
+      "no-undef": 0,
+      "no-redeclare": 0,
+      "eqeqeq": 0,
+      "no-mixed-spaces-and-tabs": 0,
+      "semi": 0,
+      "no-shadow": 0,
+      "no-spaced-func": 0,
+      "curly": 0,
+      "no-extra-semi": 0,
+      "comma-dangle": 0,
+      "space-return-throw-case": 0,
+      "no-extend-native": 0,
+      "semi-spacing": 0      
     }
   },
   "dependencies": {

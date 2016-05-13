@@ -2859,7 +2859,7 @@ function createDomFriendsListEntry(sourceName, friendName){
     
     var domAvatarUnderImage = $('<img class="avatarunderimage img-rounded" src="https://static.f-list.net/images/avatar/' + escapedFriendName + '.png" title="' + friendName + '"/>');
     domAvatar.append(domAvatarUnderImage);
-    var domAvatarOverStatus = $('<img class="avataroverstatus" src="images/status-large-' + stat + '.png" title="' + stat + '"/>');
+    var domAvatarOverStatus = $('<img class="avataroverstatus" src="images/status-large-' + stat.toLowerCase() + '.png" title="' + stat + '"/>');
     domAvatar.append(domAvatarOverStatus);
     var domAvatarSourceThumb = $('<img class="avatarsourcethumb img-circle" src="https://static.f-list.net/images/avatar/' + escapedSourceName + '.png" title="' + sourceName + '"/>');
     domAvatar.append(domAvatarSourceThumb);
