@@ -693,6 +693,9 @@ function selectChannel(name){
         
         // Hide user list title.
         App.dom.userlistTopBar.hide();
+        
+        // Focus the text area.
+        textArea.focus();
     }
     else {
         // Is the new chanel public or private?
@@ -723,6 +726,9 @@ function selectChannel(name){
 
         // Ensure the userlist title bar is showing
         App.dom.userlistTopBar.css('display', 'flex');
+        
+        // Focus the text area.
+        textArea.focus();
     }
 
     // Set newly selected channel
