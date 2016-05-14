@@ -1110,6 +1110,9 @@ function closePM(character){
         pushFeedItem(App.consts.feed.types.error, 'Tried to close PM for ' + character + ' when it isn\'t open.', true);
         return;
     }
+    
+    // Record the current scroll position
+    App.characters[character].pms.scrollTop = App.characters[character].pms.scroller.scrollTop();
           
     // Remove doms.
     App.characters[character].pms.buttonDom.remove();
@@ -3648,10 +3651,11 @@ function parseServerMessage(message){
             }
             App.characters[obj.identity].gender = obj.gender;
             App.characters[obj.identity].status = stylizeStatus(obj.status);
-            App.characters[obj.identity].pms = {};
+            if(typeof App.characters[obj.identity].pms === 'undefined'){ 
+                App.characters[obj.identity].pms = {};
+            }
 
             // Was this character our friend or bookmark?
-            
             if(obj.identity !== App.user.loggedInAs){
                 if(App.user.friendsList[App.user.loggedInAs].indexOf(obj.identity) !== -1){
                     pushFeedItem(App.consts.feed.types.alert, 'Your friend [icon]' + obj.identity + '[/icon] has come online.', false, true);
@@ -3661,6 +3665,10 @@ function parseServerMessage(message){
                 }
             }
             
+            // Do a status update.
+            if(obj.identity !== App.user.loggedInAs){
+                updateStatus(obj.identity, 'online', '');
+            }            
             break;
         case 'ORS':
             // A list of open private rooms.
@@ -3679,7 +3687,6 @@ function parseServerMessage(message){
 
             // Update dom.
             channelListUpdated();
-
             break;
         case 'PIN':
             // Respond to pings
