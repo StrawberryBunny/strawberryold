@@ -957,10 +957,6 @@ function turnOffSelectedChannel(){
     if(App.state.selectedChannel !== ''){
         // If this is a pm
         if(App.state.selectedChannel === 'pm'){
-            console.log("selected pm: " + App.state.selectedPM);
-            console.log("chracter obj: " + App.characters[App.state.selectedPM]);
-            console.log("character obj pms: " + App.characters[App.state.selectedPM].pms);
-            
             // Record the current scrolltop
             App.characters[App.state.selectedPM].pms.scrollTop = App.characters[App.state.selectedPM].pms.scroller.scrollTop();
             
@@ -1114,12 +1110,12 @@ function closePM(character){
         pushFeedItem(App.consts.feed.types.error, 'Tried to close PM for ' + character + ' when it isn\'t open.', true);
         return;
     }
-
           
     // Remove doms.
     App.characters[character].pms.buttonDom.remove();
-    App.characters[character].pms.messageDom.remove();
-    App.characters[characters].pms.scroller.remove();
+    App.characters[character].pms.scroller.remove();
+    App.characters[character].pms.textEntry.remove();
+    
     //App.characters[character].pms.userlistDom.remove();
     
     // Remove from open pm list
