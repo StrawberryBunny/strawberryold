@@ -2426,7 +2426,7 @@ function createDomToolStatus(){
         App.tools['status'].progressIcon.fadeOut();
     });
 
-    var domTextArea = $('<textarea id="statusmessage"></textarea>');
+    var domTextArea = $('<textarea id="statusmessage" maxlength="255"></textarea>');
     domFormContainer.append(domTextArea);
     domTextArea.on('keydown', function(e){
         App.tools['status'].progressIcon.fadeOut();
@@ -2454,7 +2454,7 @@ function createDomToolStatus(){
     domCont.append(btnUpdate);
     btnUpdate.click(function(){
         // Send Message
-        sendMessageToServer('STA { "status": "' + App.tools['status'].dropdown.val() + '", "statusmsg": "' + App.tools['status'].textarea.val() + '" }');
+        sendMessageToServer('STA { "status": "' + App.tools['status'].dropdown.val() + '", "statusmsg": "' + escapeJson(App.tools['status'].textarea.val()) + '" }');
 
         // Show progress spinner.
         App.tools['status'].progressIcon.removeClass();
