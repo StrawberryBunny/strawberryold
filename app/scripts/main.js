@@ -645,42 +645,7 @@ function selectChannel(name){
     }
 
     // Turn off the currently selected channel?
-    if(App.state.selectedChannel !== ''){
-        // If this is a pm
-        if(App.state.selectedChannel === 'pm'){
-            App.characters[App.state.selectedPM].pms.messageDom.remove();
-            App.characters[App.state.selectedPM].pms.buttonDom.removeClass('fabuttonselected');
-            return;
-        }
-                
-        // Is the selected channel public or private?
-        var isPublic = App.state.selectedChannel.substr(0, 3) !== 'ADH';
-
-        // get the channel list it belongs to
-        var channels = isPublic ? App.publicChannels : App.privateChannels;
-
-        // Record the current scrollTop
-        channels[App.state.selectedChannel].scrollTop = channels[App.state.selectedChannel].scroller.scrollTop();
-
-        // Remove the message dom.
-        channels[App.state.selectedChannel].scroller.remove();
-        
-        // Remove the text area
-        channels[App.state.selectedChannel].textEntry.remove();
-
-        // Remove the userlist
-        channels[App.state.selectedChannel].userlistDom.remove();
-
-        // Deselect the channel's button
-        channels[App.state.selectedChannel].buttonDom.removeClass('fabuttonselected');
-    }
-    else {
-        // Turn off the no-channel bg
-        App.dom.noChannelWrapper.remove();
-        
-        // TextArea
-        App.dom.noChannelTextEntry.remove();
-    }
+    turnOffSelectedChannel();
 
     // Turn on the new channel.
     if(name === ''){
@@ -890,14 +855,12 @@ function receiveMessage(channel, character, message){
     // Is the scrollbar at the bottom?
     var domScroller = channels[channel].scroller;
     var autoScroll = domScroller.scrollTop() >= domScroller[0].scrollHeight - domScroller.height() - (20); // (20 == padding?)
-    console.log("received message in " + channel + ", scrollTop(): " + domScroller.scrollTop() + ", [0].scrollHeight: " + domScroller[0].scrollHeight + ", height(): " + domScroller.height());
     
     // Append dom.
     channels[channel].messageDom.append(dom);
         
     // if the scrollbar is already at the bottom..Scroll down the channel to the new message
     if(autoScroll){
-        console.log("Autoscrolling " + channel);
         channels[channel].scroller.stop();
         channels[channel].scroller.animate({
             scrollTop: channels[channel].scroller[0].scrollHeight
@@ -990,6 +953,60 @@ function createChannelSendButtonOnKeyUpCallback(textArea, channel){
     }
 }
 
+function turnOffSelectedChannel(){
+    if(App.state.selectedChannel !== ''){
+        // If this is a pm
+        if(App.state.selectedChannel === 'pm'){
+            console.log("selected pm: " + App.state.selectedPM);
+            console.log("chracter obj: " + App.characters[App.state.selectedPM]);
+            console.log("character obj pms: " + App.characters[App.state.selectedPM].pms);
+            
+            // Record the current scrolltop
+            App.characters[App.state.selectedPM].pms.scrollTop = App.characters[App.state.selectedPM].pms.scroller.scrollTop();
+            
+            // Remove the message dom.
+            App.characters[App.state.selectedPM].pms.scroller.remove();
+            
+            // Remove the text area
+            App.characters[App.state.selectedPM].pms.textEntry.remove();
+            
+            // Deselect the pm's button.
+            App.characters[App.state.selectedPM].pms.buttonDom.removeClass('fabuttonselected');
+            
+            // Return
+            return;
+        }
+        
+        // Is the selected channel public or private?
+        var isPublic = App.state.selectedChannel.substr(0, 3) !== 'ADH';
+
+        // get the channel list it belongs to
+        var channels = isPublic ? App.publicChannels : App.privateChannels;
+
+        // Record the current scrollTop
+        channels[App.state.selectedChannel].scrollTop = channels[App.state.selectedChannel].scroller.scrollTop();
+
+        // Remove the message dom.
+        channels[App.state.selectedChannel].scroller.remove();
+        
+        // Remove the text area
+        channels[App.state.selectedChannel].textEntry.remove();
+
+        // Remove the userlist
+        channels[App.state.selectedChannel].userlistDom.remove();
+
+        // Deselect the channel's button
+        channels[App.state.selectedChannel].buttonDom.removeClass('fabuttonselected');
+    }
+    else {
+        // Turn off the no-channel bg
+        App.dom.noChannelWrapper.remove();
+        
+        // TextArea
+        App.dom.noChannelTextEntry.remove();
+    }
+}
+
 /**
  * PMs =============================================================================================================================
  */
@@ -1002,34 +1019,36 @@ function selectPM(character){
     }
     
     // Turn off the currently selected channel?
-    if(App.state.selectedChannel !== ''){
-        turnOffSelectedChannel();
-    }
-    else {
-        // Turn off the no-channel stuff
-        App.dom.noChannelImage.hide();
-    }
+    turnOffSelectedChannel();
 
     // Turn on the new channel.
     if(character === ''){
-        App.dom.noChannelImage.show();
-        App.dom.userlistTitle.hide();
+        App.dom.channelContents.append(App.dom.noChannelWrapper);
+        App.dom.userlistTopBar.hide();
     }
     else {
         // Attach the message dom
-        App.dom.channelContents.append(App.characters[character].pms.messageDom);
-
-        // Attach the userlist
-        //App.dom.userlist.append(App.characters[character].pms.userlistDom);
+        App.dom.channelContents.append(App.characters[character].pms.scroller);
 
         // Select the channel's button
         App.characters[character].pms.buttonDom.addClass('fabuttonselected');
-
+        
+        // Attach the text area.
+        App.dom.textAreaHolder.append(App.characters[character].pms.textEntry);
+        // Listener
+        var textArea = App.characters[character].pms.textEntry.find('textarea');
+        textArea.on('keypress', createChannelTextAreaOnKeyUpCallback(textArea, name)); 
+        var button = App.characters[character].pms.textEntry.find('.textentrybutton');
+        button.on('click', createChannelSendButtonOnKeyUpCallback(textArea, name));
+        
         // Change the current title.
         App.dom.userlistTitle.text(character);
 
         // Ensure the userlist title bar is showing
         App.dom.userlistTopBar.css('display', 'flex');
+        
+        // Reset the scroll position
+        App.characters[character].pms.scroller.scrollTop(App.characters[character].pms.scrollTop);
     }
 
     // Set newly selected channel
@@ -1048,9 +1067,20 @@ function openPM(character){
     App.state.openPMs.push(character);
 
     // Do we need to create doms for this channel?
+    if(typeof App.characters[character].pms.scroller === 'undefined'){
+        var domScroller = createDomPMScroller();
+        App.characters[character].pms.scroller = domScroller;
+    }
+    
     if(typeof App.characters[character].pms.messageDom === 'undefined'){
         var domMessages = createDomPMContents();
         App.characters[character].pms.messageDom = domMessages;
+        App.characters[character].pms.scroller.append(domMessages);
+    }
+    
+    if(typeof App.characters[character].pms.textEntry === 'undefined'){
+        var domTextEntry = createDomPMTextEntry();
+        App.characters[character].pms.textEntry = domTextEntry;
     }
 
     if(typeof App.characters[character].pms.buttonDom === 'undefined'){
@@ -1089,6 +1119,7 @@ function closePM(character){
     // Remove doms.
     App.characters[character].pms.buttonDom.remove();
     App.characters[character].pms.messageDom.remove();
+    App.characters[characters].pms.scroller.remove();
     //App.characters[character].pms.userlistDom.remove();
     
     // Remove from open pm list
@@ -1116,9 +1147,21 @@ function receivePM(character, message, sender){
     }
     App.characters[character].pms.messages.push(message);
     
+    // Is the scrollbar at the bottom?
+    var domScroller = App.characters[character].pms.scroller;
+    var autoScroll = domScroller.scrollTop() >= domScroller[0].scrollHeight - domScroller.height() - (20); // (20 == padding?)
+    
     // Create dom
     var dom = createDomMessage(sender, message);
     App.characters[character].pms.messageDom.append(dom);
+    
+    // if the scrollbar is already at the bottom..Scroll down the channel to the new message
+    if(autoScroll){
+        App.characters[character].pms.scroller.stop();
+        App.characters[character].pms.scroller.animate({
+            scrollTop: App.characters[character].pms.scroller[0].scrollHeight
+        }, 1000);
+    }
     
     // Feed
     if(sender !== App.user.loggedInAs && (App.state.selectedChannel !== 'pm' || App.state.selectedPM !== sender)){
@@ -3211,6 +3254,18 @@ function createDomPMButton(character){
     return domMain;
 }
 
+function createDomPMTextEntry(){
+    var domContainer = $('<div class="textentrycontainer"></div>');
+    
+    var domTA = $('<textarea class="textentrytextarea"></textarea>');
+    domContainer.append(domTA);
+    
+    var domTextEntryButton = $('<button type="submit" class="textentrybutton btn btn-default" autocomplete="off">Send</button>');
+    domContainer.append(domTextEntryButton);
+    
+    return domContainer;
+}
+
 /* Others */
 
 function createDomAlert(message){
@@ -3275,6 +3330,10 @@ function createDomMessage(character, message){
     domContainer.append('<div class="messagetext">' + bb.html + '</div>');
 
     return domContainer;
+}
+
+function createDomPMScroller(){
+    return $('<div class="pmscroller"></div>');
 }
 
 /**
