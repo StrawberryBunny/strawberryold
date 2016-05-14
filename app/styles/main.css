@@ -178,7 +178,6 @@ html, body {
     overflow-y: hidden; /*overflow-y: auto;*/
     overflow-x: hidden;
     white-space: nowrap;
-    padding: 10px;
 }
 
 .nochannelwrapper {
@@ -198,6 +197,7 @@ html, body {
     width: 100%;
     height: 100%;
     overflow-y: auto;
+    padding: 10px;
 }
 
 #nochannelimage {

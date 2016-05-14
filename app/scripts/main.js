@@ -889,16 +889,18 @@ function receiveMessage(channel, character, message){
     
     // Is the scrollbar at the bottom?
     var domScroller = channels[channel].scroller;
-    var autoScroll = domScroller.scrollTop() >= domScroller[0].scrollHeight - domScroller.height();
+    var autoScroll = domScroller.scrollTop() >= domScroller[0].scrollHeight - domScroller.height() - (20); // (20 == padding?)
+    console.log("received message in " + channel + ", scrollTop(): " + domScroller.scrollTop() + ", [0].scrollHeight: " + domScroller[0].scrollHeight + ", height(): " + domScroller.height());
     
     // Append dom.
     channels[channel].messageDom.append(dom);
         
     // if the scrollbar is already at the bottom..Scroll down the channel to the new message
     if(autoScroll){
+        console.log("Autoscrolling " + channel);
         channels[channel].scroller.stop();
         channels[channel].scroller.animate({
-            scrollTop: channels[channel].messageDom.height()
+            scrollTop: channels[channel].scroller[0].scrollHeight
         }, 1000);
     }
 }
