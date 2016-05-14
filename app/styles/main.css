@@ -146,10 +146,6 @@ html, body {
     background-color: #333333;
 }
 
-.channels .fabuttonselected {
-    background-color: #222222;
-}
-
 .channels .fabutton {
     display: flex;
     text-align: center;
@@ -827,7 +823,20 @@ html, body {
 }
 
 .fabutton:hover {
+    /*background: rgba(255,  0, 0, 0.25);*/
     color: #ea4933;
+}
+
+.fabuttonbuzzed {
+    background-color: #ea4933;
+}
+
+.channels .fabuttonbuzzed {
+    background-color: #ea4933;
+}
+
+.channels .fabuttonselected {
+    background-color: #222222;
 }
 
 .fabuttonselected {
@@ -838,9 +847,25 @@ html, body {
     font-size: 18px;
     position: absolute;
     right: 0px;
+    top: 0px;
+    color: #c7c7c7;    
+}
+
+.fabutton:hover .avatarbutton {
+    
+}
+
+.hovertint {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    left: 0px;
     top: 0px;    
 }
 
+.fabutton:hover .hovertint {
+    background-color: rgba(255, 0, 0, 0.15)
+}
 
 
 .faicon {

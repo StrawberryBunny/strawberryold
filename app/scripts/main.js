@@ -376,7 +376,7 @@ var App = {
             alias: ['pr'],
             func: function(e){
                 if(App.state.selectedChannel !== ''){
-                    receiveMessage(App.state.selectedChannel, 'preview', e);
+                    receiveMessage(App.state.selectedChannel, 'preview', e, false);
                     return true;
                 }
                 return false;
@@ -506,7 +506,7 @@ function sendMessage(message, isPM, chanchar){
         sendMessageToServer('MSG { "channel": "' + chanchar + '", "message": "' + escapeJson(serverMessage) + '" }');
 
         // Add the message to the chat window
-        receiveMessage(chanchar, App.user.loggedInAs, message);
+        receiveMessage(chanchar, App.user.loggedInAs, message, false);
     }
     
     return true;
@@ -700,6 +700,10 @@ function selectChannel(name){
         
         // Reset the scroll position
         channels[name].scroller.scrollTop(channels[name].scrollTop);
+        
+        // Turn off aniamtions.
+        channels[name].buttonDom.stop();
+        channels[name].buttonDom.css('background-color', '');
     }
 
     // Set newly selected channel
@@ -836,7 +840,7 @@ function closeChannel(name){
     
 }
 
-function receiveMessage(channel, character, message){
+function receiveMessage(channel, character, message, buzz){
     var isPublic = channel.substr(0, 3) !== 'ADH';
     var channels = isPublic ? App.publicChannels : App.privateChannels;
     if(typeof channels[channel].messages === 'undefined'){
@@ -866,6 +870,24 @@ function receiveMessage(channel, character, message){
             scrollTop: channels[channel].scroller[0].scrollHeight
         }, 1000);
     }
+    
+    // If this channel isn't selected.
+    if(buzz){
+        console.log(App.state.selectedChannel + " / " + channel);
+        if(App.state.selectedChannel !== channel){
+            // Select this button
+            animateButtonBuzz(channels[channel].buttonDom, true);
+        }
+    }
+}
+
+function animateButtonBuzz(button, up){
+    //#4f8de1
+    button.animate({
+        backgroundColor: (up ? '#666666' : '#333333')
+    }, 1500, up ? 'easeOutExpo' : 'easeInExpo', function(){
+        animateButtonBuzz(button, !up);
+    });
 }
 
 function characterJoinedChannel(character, channel){
@@ -1046,10 +1068,14 @@ function selectPM(character){
         // Reset the scroll position
         App.characters[character].pms.scroller.scrollTop(App.characters[character].pms.scrollTop);
     }
-
+    
     // Set newly selected channel
     App.state.selectedChannel = 'pm';
     App.state.selectedPM = character;
+    
+    // Turn off aniamtions.
+    App.characters[character].pms.buttonDom.stop();
+    App.characters[character].pms.buttonDom.css('background-color', '');
 }
 
 function openPM(character){
@@ -1169,6 +1195,11 @@ function receivePM(character, message, sender){
     
     // typing status
     updateTypingStatus(sender, 'clear');
+    
+    if(App.state.selectedChannel !== 'pm' || App.state.selectedPM !== character){
+        // Select this button
+        animateButtonBuzz(App.characters[character].pms.buttonDom, true);
+    }
 }
 
 /**
@@ -2321,7 +2352,14 @@ function createDomToolPanel(){
 /* All Tools */
 function createDomsTool(domMainMenu, domToolPanel, name){
     // Create the doms
-    var buttonDom = $('<div class="fabutton" title="' + App.consts.tools[name].title + '"><span class="fa ' + App.consts.tools[name].icon + '"></span></div>');
+    var buttonDom = $('<div class="fabutton" title="' + App.consts.tools[name].title + '"></div>');
+    
+    var domIcon = $('<span class="fa ' + App.consts.tools[name].icon + '"></span>');
+    buttonDom.append(domIcon);
+    
+    var domTint = $('<div class="hovertint"></div>');
+    buttonDom.append(domTint);    
+    
     var contentDom = $('<div class="toolcontainer tool' + name + '"></div>');
 
     // Append these doms.
@@ -3216,7 +3254,15 @@ function createDomChannelUserlist(){
 }
 
 function createDomChannelButton(isPublic, channelName, channelTitle){
-    return $('<div id="channel-' + stripWhitespace(channelName) + '" class="fabutton" title="' + channelTitle + '"><span id="data" title="' + channelName + '"></span><span class="fa ' + (isPublic ? 'fa-th' : 'fa-key') + '"></span></div>');
+    var domMain = $('<div id="channel-' + stripWhitespace(channelName) + '" class="fabutton" title="' + channelTitle + '"></div>');
+    
+    var domIcon = $('<span id="data" title="' + channelName + '"></span><span class="fa ' + (isPublic ? 'fa-th' : 'fa-key') + '"></span>');
+    domMain.append(domIcon);
+    
+    var domTint = $('<div class="hovertint"></div>');
+    domMain.append(domTint);
+    
+    return domMain;
 }
 
 function createDomChannelScroller(){
@@ -3243,8 +3289,11 @@ function createDomPMContents(){
 function createDomPMButton(character){
     var domMain = $('<div id="pm-' + stripWhitespace(character) + '" class="fabutton pm" title="' + character + '"></div>');
     
-    var domImage = $('<img id="data" class="img-rounded" src="https://static.f-list.net/images/avatar/' + escapeHtml(character).toLowerCase() + '.png" title="' + character + '"/>');
+    var domImage = $('<img id="data" class="avatarbutton img-rounded" src="https://static.f-list.net/images/avatar/' + escapeHtml(character).toLowerCase() + '.png" title="' + character + '"/>');
     domMain.append(domImage);
+    
+    var domTint = $('<div class="hovertint"></div>');
+    domMain.append(domTint);
     
     var domTypingStatus = $('<span id="typingstatus" class="fa fa-keyboard-o"></span>');
     domMain.append(domTypingStatus);
@@ -3418,7 +3467,7 @@ function parseServerMessage(message){
             channels = isPublic ? App.publicChannels : App.privateChannels;
             var showNewDescription = typeof channels[obj.channel].description === 'undefined' || channels[obj.channel].description !== obj.description;
             if(showNewDescription){            
-                receiveMessage(obj.channel, 'Description', obj.description);
+                receiveMessage(obj.channel, 'Description', obj.description, false);
             }
             // Store description
             channels[obj.channel].description = obj.description;
@@ -3642,7 +3691,7 @@ function parseServerMessage(message){
             break;
         case 'MSG':
             // A message is received from a user in a channel.
-            receiveMessage(obj.channel, obj.character, obj.message);
+            receiveMessage(obj.channel, obj.character, obj.message, true);
             break;
         case 'NLN':
             // A user connected.
