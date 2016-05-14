@@ -455,10 +455,6 @@ function logInComplete(account, ticket, characters){
 
 function loadOptionsCookie(){
     // Load options cookie.
-    console.log("------- Cookie --------");
-    console.log(cookie.get('options', 'nocookiefound'));
-    console.log("-----------------------");
-    
     var ckOptions = JSON.parse(cookie.get('options', JSON.stringify({})));
     
     // Gender colours.
@@ -867,7 +863,7 @@ function openChannel(name){
     channels[name].userlistDom.empty();
     for(var i = 0; i < channels[name].users.length; i++){
         var charName = channels[name].users[i];
-        var dom = createDomUserEntry(charName, App.characters[charName].gender, App.characters[charName].status, App.characters[charName].statusmsg);
+        var dom = createDomUserEntry(charName, App.characters[charName].gender, App.characters[charName].status, App.characters[charName].statusmsg, false, name);
         channels[name].userlistDom.append(dom);
     }
         
@@ -991,7 +987,7 @@ function characterJoinedChannel(character, channel){
     channels[channel].userlistDom.empty();
     for(var i = 0; i < channels[channel].users.length; i++){
         var charName = channels[channel].users[i];
-        var dom = createDomUserEntry(charName, App.characters[charName].gender, App.characters[charName].status, App.characters[charName].statusmsg);
+        var dom = createDomUserEntry(charName, App.characters[charName].gender, App.characters[charName].status, App.characters[charName].statusmsg, false, channel);
         channels[channel].userlistDom.append(dom);
     }
     
@@ -3565,13 +3561,47 @@ function createDomAlert(message){
     return $('<div class="alert alert-danger fade in"><a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a><strong>Error!</strong> ' + message + '</div>');
 }
 
-function createDomUserEntry(name, gender, status, statusmsg, slashMe){
+function createDomUserEntry(name, gender, status, statusmsg, slashMe, channel){
     var domContainer = $('<div class="userentry" title="' + name + '"></div>');
 
     var genderColour = '#444444';
+    
     if(name !== 'Description'){
+        // Status image.
         var domImg = $('<img class="statusimg" src="images/status-small-' + status.toLowerCase() + '.png" title="' + status + '"/>');
         domContainer.append(domImg);
+        
+        // is this char an op in this room?
+        if(typeof channel !== 'undefined'){
+            var isPublic = channel.substr(0, 3) !== 'ADH';
+            var channels = isPublic ? App.publicChannels : App.privateChannels;
+                      
+            // Is this user the owner?
+            var isOwner = channels[channel].ops.indexOf(name) === 0;
+            
+            // Make image dom.
+            if(isPublic){
+                // Is the user an op in this channel?
+                if(channels[channel].ops.indexOf(name) !== -1){
+                    var domOpImg = $('<img class="opimage" src="images/gem-small-op.png" title="Official Channel Operator"/>');
+                    domContainer.append(domOpImg);
+                }
+                else if(App.ops.indexOf(name) !== -1){
+                    // Is the user a global admin?
+                    var domOpImg = $('<img class="opimage" src="images/gem-small-admin.png" title="Offical Chat Operator"/>');
+                    domContainer.append(domOpImg);
+                }
+            }
+            else {
+                // is the user an op in this channel?
+                if(channels[channel].ops.indexOf(name) !== -1){
+                    var domOpImg = $('<img class="opimage" src="images/chevron-small-' + (isOwner ? 'owner' : 'op') + '.png" title="' + (isOwner ? 'Channel Owner' : 'Channel Operator') + '"/>');
+                    domContainer.append(domOpImg);                
+                }
+            }
+        }
+        
+        // Gender colour.
         genderColour = App.options.genderColours[App.characters[name].gender.toLowerCase()][0];
     }
 
@@ -3736,6 +3766,7 @@ function parseServerMessage(message){
             sendMessageToServer('ORS');
             break;
         case 'CIU':
+            // Receiving an invite to a channel.
             // Store title
             isPublic = obj.name.substr(0, 3) === 'ADH';
             channels = isPublic ? App.publicChannels : App.privateChannels;
@@ -3744,8 +3775,7 @@ function parseServerMessage(message){
             }
             channels[obj.name].name = obj.name;
             channels[obj.name].title = obj.title;            
-        
-            // Receiving an invite to a channel.
+                    
             pushFeedItem(App.consts.feed.types.alert, obj.sender + ' has invited you to [session=' + obj.title + ']' + obj.name + '[/session]', false, true);
             break;
         case 'CBU':
