@@ -510,6 +510,9 @@ function updateStatus(character, status, statusmsg){
 }
 
 function updateTypingStatus(character, status){
+    // We don't need our own typing status.
+    if(character === App.user.loggedInAs) return;
+    
     // Find any open PM channels for this character.
     if(App.state.openPMs.indexOf(character) !== -1){
         var statusSpan = App.characters[character].pms.buttonDom.find('#typingstatus');
@@ -696,6 +699,18 @@ function openChannel(name){
         channels[name].buttonDom = domButton;
     }
     
+    /*
+    if(typeof channels[name].scroller === 'undefined'){
+        var domScroller = createDomChannelScroller();
+        channels[name].scroller = domScroller;
+    }
+    
+    if(typeof channels[name].textArea === 'undefined'){
+        var domTextArea = createDomChannelTextArea();
+        channels[name].textArea = domTextArea; 
+    }
+    */
+    
     // Append the dom button to the channel list.
     App.dom.openChannelList.append(channels[name].buttonDom);
     
@@ -715,8 +730,7 @@ function openChannel(name){
         var dom = createDomUserEntry(charName, App.characters[charName].gender, App.characters[charName].status, App.characters[charName].statusmsg);
         channels[name].userlistDom.append(dom);
     }
-    
-    
+        
     // If this channel is listed (Ie not a private/locked room.);
     if(typeof channels[name].listEntry !== 'undefined'){
         // Set this channel's entry in the room list to on.
@@ -792,6 +806,7 @@ function receiveMessage(channel, character, message){
     // Check for dom interupts.
     checkForDomInterupts(dom, false, channel, character);
     
+    // Append dom.
     channels[channel].messageDom.append(dom);
 }
 
@@ -1021,7 +1036,7 @@ function receivePM(character, message, sender){
     }
     
     // typing status
-    updateTypingStatus(character, 'clear');
+    updateTypingStatus(sender, 'clear');
 }
 
 /**
@@ -3051,6 +3066,14 @@ function createDomChannelUserlist(){
 
 function createDomChannelButton(isPublic, channelName, channelTitle){
     return $('<div id="channel-' + stripWhitespace(channelName) + '" class="fabutton" title="' + channelTitle + '"><span id="data" title="' + channelName + '"></span><span class="fa ' + (isPublic ? 'fa-th' : 'fa-key') + '"></span></div>');
+}
+
+function createDomChannelScroller(){
+    return $('<div class="channelscroller"></div>');
+}
+
+function createDomChannelTextArea(){
+    return $('<textarea class="channeltextarea"></textarea>');
 }
 
 /* PMs */
