@@ -805,6 +805,10 @@ html, body {
     margin-right: 10px;
 }
 
+.toolsettingspanel:not(:last-child) {
+    margin-bottom: 10px;
+}
+
 .toolsettingspanel .panelbuttons {
     width: 100%;
     text-align: right;
@@ -812,6 +816,10 @@ html, body {
 
 .toolsettingspanel .btn {
     margin-top: 10px;    
+}
+
+.toolsettingspanel input {
+    width: 100%;
 }
 
 /* Global */
@@ -1013,4 +1021,8 @@ a:active {
 
 .urllink .fa-image {
     margin-right: 3px;
+}
+
+input {
+    color: #222222;
 }

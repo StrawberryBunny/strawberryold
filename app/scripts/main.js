@@ -425,6 +425,9 @@ function checkForReadyStatus(){
 
             // Switch to the chat.
             $('body').append(createDomMainChat());
+            
+            // Options
+            loadOptionsCookie();
         }, App.consts.logInTimeout);
     }    
     else {
@@ -448,6 +451,48 @@ function logInComplete(account, ticket, characters){
     
     // Save to cookie
     cookie.set('session', account + '|' + ticket + '|' + characters, { expires: 1 });
+}
+
+function loadOptionsCookie(){
+    // Load options cookie.
+    console.log("------- Cookie --------");
+    console.log(cookie.get('options', 'nocookiefound'));
+    console.log("-----------------------");
+    
+    var ckOptions = JSON.parse(cookie.get('options', JSON.stringify({})));
+    
+    // Gender colours.
+    if(typeof ckOptions.genderColours !== 'undefined'){
+        for(var key in ckOptions.genderColours){
+            App.options.genderColours[key][0] = ckOptions.genderColours[key];
+        }        
+    }
+    
+    // Mentions
+    if(typeof ckOptions.mentions !== 'undefined'){
+        App.options.mentions = ckOptions.mentions;
+        var str = '';
+        for(var i = 0; i < App.options.mentions.length; i++){
+            str += App.options.mentions[i];
+            if(i !== App.options.mentions.length - 1){
+                str += ',';
+            }
+        }
+        App.tools['settings'].mentionsInput.val(str);
+    }
+    
+    // Start-up channels.
+    if(typeof ckOptions.startUpChannels !== 'undefined'){
+        var str = '';
+        for(var j = 0; j < ckOptions.startUpChannels.length; j++){
+            joinChannel(ckOptions.startUpChannels[j]);
+            str += ckOptions.startUpChannels[j];
+            if(j != ckOptions.startUpChannels.length - 1){
+                str += ',';
+            }
+        }
+        App.tools['settings'].startUpChannelsInput.val(str);
+    }
 }
 
 function throwError(message){
@@ -3363,6 +3408,51 @@ function createDomToolSettings(){
         
         cookie.set('options', JSON.stringify(ckOptions));
     });
+    
+    // Mentions
+    
+    var domMentions = $('<div class="toolsettingspanel"></div>');
+    domContents.append(domMentions);
+    
+    domMentions.append('<h3><b>Mentions</b></h3>');
+    
+    var domHelpText = $('<ul><li>A comma seperated list of words and/or phrases that will fire off an alert.</li><li>For example:</li><li>Strawberry,CASe doES NoT MatTeR,Warhammer,Tracer,something with spaces,etc</li></ul>');
+    domMentions.append(domHelpText);
+    
+    var domInput = $('<input type="text" id="mentionsinput" value="' + App.user.loggedInAs + '"></input>');
+    domMentions.append(domInput);
+    App.tools['settings'].mentionsInput = domInput;
+    domInput.on('keyup', function(e){
+        // Load the options.
+        var ckOptions = JSON.parse(cookie.get('options', JSON.stringify({})));
+        ckOptions.mentions = $(this).val().split(',');
+        cookie.set('options', JSON.stringify(ckOptions));
+        
+        // Set new options.
+        App.options.mentions = $(this).val().split(',');
+    });
+    
+    // Start Channels
+    
+    var domStartChannels = $('<div class="toolsettingspanel"></div>');
+    domContents.append(domStartChannels);
+    
+    domStartChannels.append('<h3><b>Start-Up Channels</b></h3>');
+    
+    domStartChannels.append('<ul><li>A comma seperated list of channels to join when Strawberry starts up.</li>' + 
+        '<li>For private channels you will need their code which you can get by typing /code in the channel.</li>' +
+        '<li>For example...</li>' +
+        '<li>Cum Lovers,Femboy,Femdom,Monster\'s Lair,ADH-491cbcdbbbe8039e87cb</li>' + 
+        '</ul>');
+        
+    var domStartupInput = $('<input type="text" id="startupchannelsinput" value=""></input>');
+    domStartChannels.append(domStartupInput);
+    App.tools['settings'].startUpChannelsInput = domStartupInput;
+    domStartupInput.on('keyup', function(e){
+        var ckOptions = JSON.parse(cookie.get('options', JSON.stringify({})));
+        ckOptions.startUpChannels = $(this).val().split(',');
+        cookie.set('options', JSON.stringify(ckOptions));
+    });
 }
 
 function createGenderColorCPChangeCallback(gender){
@@ -4126,15 +4216,7 @@ $(document).ready(function(){
         }
     });
     
-    // Load options cookie.
-    var ckOptions = JSON.parse(cookie.get('options', JSON.stringify({})));
     
-    // Gender colours.
-    if(typeof ckOptions.genderColours !== 'undefined'){
-        for(var key in ckOptions.genderColours){
-            App.options.genderColours[key][0] = ckOptions.genderColours[key];
-        }
-    }
         
     // Do we have session a cookie?
     var ckSession = cookie.get('session', 'none');
