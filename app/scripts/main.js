@@ -571,6 +571,8 @@ function sendMessage(message, isPM, chanchar){
 function updateStatus(character, status, statusmsg){
     App.characters[character].status = status;
     App.characters[character].statusmsg = statusmsg;
+    
+    console.log("Updating status for " + character);
 
     // If us
     if(character === App.user.loggedInAs){
@@ -583,12 +585,48 @@ function updateStatus(character, status, statusmsg){
     $('.userentry').each(function(){
         var nameplate = $(this).children('.nameplate');
         if(nameplate.text() === character){
-            var statusimg = $(this).children('.statusimg');
+            var statusimg = $(this).find('.statusimg');
             statusimg.attr('src', 'images/status-small-' + status.toLowerCase() + '.png');
             statusimg.attr('title', stylizeStatus(status));
             nameplate.attr('title', statusmsg);
+            console.log("Found a random userentry on the current dom: " + character);
         }
     });
+    
+    for(var i = 0; i < App.state.openChannels.length; i++){
+        var isPublic = App.state.openChannels[i].substr(0, 3) !== 'ADH';
+        var channels = isPublic ? App.publicChannels : App.privateChannels;
+        channels[App.state.openChannels[i]].messageDom.find('.userentry').each(function(e){
+            var nameplate = $(this).children('.nameplate');
+            if(nameplate.text() === character){
+                var statusimg = $(this).find('.statusimg');
+                statusimg.attr('src', 'images/status-small-' + status.toLowerCase() + '.png');
+                statusimg.attr('title', stylizeStatus(status));
+                nameplate.attr('title', statusmsg);
+            }
+        });
+        channels[App.state.openChannels[i]].userlistDom.find('.userentry').each(function(e){
+            var nameplate = $(this).children('.nameplate');
+            if(nameplate.text() === character){
+                var statusimg = $(this).find('.statusimg');
+                statusimg.attr('src', 'images/status-small-' + status.toLowerCase() + '.png');
+                statusimg.attr('title', stylizeStatus(status));
+                nameplate.attr('title', statusmsg);
+            }
+        });
+    }
+    
+    for(var j = 0; j < App.state.openPMs.length; j++){
+        App.characters[App.state.openPMs[j]].pms.messageDom.find('.userentry').each(function(e){
+            var nameplate = $(this).children('.nameplate');
+            if(nameplate.text() === character){
+                var statusimg = $(this).find('.statusimg');
+                statusimg.attr('src', 'images/status-small-' + status.toLowerCase() + '.png');
+                statusimg.attr('title', stylizeStatus(status));
+                nameplate.attr('title', statusmsg);
+            }
+        });
+    }
 }
 
 function updateTypingStatus(character, status){
