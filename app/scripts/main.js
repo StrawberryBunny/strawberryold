@@ -79,6 +79,9 @@ var App = {
         },
         viewer: {
             target: ''
+        },
+        settings: {
+            genderColourPickers: {}
         }
     },
     consts: {
@@ -151,16 +154,28 @@ var App = {
         permissions: -1,
         icon_blacklist: []
     },
+    defaults: {
+        genderColours: {
+            male: 			['#5895df', 'Male'],
+			female:			['#ea6fbd', 'Female'],
+			herm:			['#c148f3', 'Herm'],
+			shemale:		['#e52591', 'Shemale'],
+			cuntboy:		['#27b011', 'Cuntboy'],
+			maleherm:		['#1e22bf', 'Male-Herm'],
+			none:			['#e2e797', 'None'],
+			transgender: 	['#e86937', 'Transgender']
+        }
+    },
     options: {
 		genderColours: {
-			male: 			'#5895df',
-			female:			'#ea6fbd',
-			herm:			'#c148f3',
-			shemale:		'#e52591',
-			cuntboy:		'#27b011',
-			maleherm:		'#1e22bf',
-			none:			'#e2e797',
-			transgender: 	'#e86937'
+			male: 			['#5895df', 'Male'],
+			female:			['#ea6fbd', 'Female'],
+			herm:			['#c148f3', 'Herm'],
+			shemale:		['#e52591', 'Shemale'],
+			cuntboy:		['#27b011', 'Cuntboy'],
+			maleherm:		['#1e22bf', 'Male-Herm'],
+			none:			['#e2e797', 'None'],
+			transgender: 	['#e86937', 'Transgender']
 		},
 		timestamps: true
 	},
@@ -633,6 +648,36 @@ function selectPreviousChannelOrPM(index){
     }
 }
 
+function updateAllUserEntries(){
+    $('.userentry').each(function(e){
+		$(this).find('.nameplate').css('color', App.options.genderColours[App.characters[$(this).attr('title')].gender.toLowerCase()][0]);        
+	});
+    
+    // '.userentries' that aren't attached to the dom right now
+    for(var i = 0; i < App.state.openChannels.length; i++){
+        var isPublic = App.state.openChannels[i].substr(0, 3) !== 'ADH';
+        var channels = isPublic ? App.publicChannels : App.privateChannels;
+        channels[App.state.openChannels[i]].messageDom.find('.userentry').each(function(e){
+            $(this).find('.nameplate').css('color', App.options.genderColours[App.characters[$(this).attr('title')].gender.toLowerCase()][0]);
+            $(this).find('.statusimg').attr('title', App.characters[$(this).attr('title')]);
+            $(this).find('.nameplate').attr('title', App.characters[$(this).attr('title')].statusmsg);
+        });
+        channels[App.state.openChannels[i]].userlistDom.find('.userentry').each(function(e){
+            $(this).find('.nameplate').css('color', App.options.genderColours[App.characters[$(this).attr('title')].gender.toLowerCase()][0]);
+            $(this).find('.statusimg').attr('title', App.characters[$(this).attr('title')]);
+            $(this).find('.nameplate').attr('title', App.characters[$(this).attr('title')].statusmsg);
+        });
+    }
+    
+    for(var j = 0; j < App.state.openPMs.length; j++){
+        App.characters[App.state.openPMs[j]].pms.messageDom.find('.userentry').each(function(e){
+            $(this).find('.nameplate').css('color', App.options.genderColours[App.characters[$(this).attr('title')].gender.toLowerCase()][0]);
+            $(this).find('.statusimg').attr('title', App.characters[$(this).attr('title')]);
+            $(this).find('.nameplate').attr('title', App.characters[$(this).attr('title')].statusmsg);
+        });
+    }
+}
+
 /**
  * Channels ========================================================================================================================
  */
@@ -873,7 +918,6 @@ function receiveMessage(channel, character, message, buzz){
     
     // If this channel isn't selected.
     if(buzz){
-        console.log(App.state.selectedChannel + " / " + channel);
         if(App.state.selectedChannel !== channel){
             // Select this button
             animateButtonBuzz(channels[channel].buttonDom, true);
@@ -2128,7 +2172,7 @@ function createDomMainChat(){
     createDomToolFriendsList();
     createDomToolInfo();
     createDomToolPictures();
-    
+    createDomToolSettings();
 
     // ret
     return domChatContainer;
@@ -3247,6 +3291,108 @@ function createDomToolPicturesEntry(url, sender, message){
     return domMain;
 }
 
+function createDomToolSettings(){
+    var domScroller = $('<div class="toolsettingsscroller"></div>');
+    App.tools['settings'].content.append(domScroller);
+    
+    var domContents = $('<div class="toolsettingsscrollercontents"></div>');
+    domScroller.append(domContents);
+    
+    // Gender Colours.
+    
+    var domColours = $('<div class="toolsettingspanel"></div>');
+    domContents.append(domColours);
+    
+    domColours.append('<h3><b>Gender Colours</b></h3>');
+       
+    var domList = $('<ul></ul>');
+    domColours.append(domList); 
+        
+    var dom;
+    for(var key in App.options.genderColours){
+        var domLi = $('<li></li>');
+        domList.append(domLi);
+              
+        dom = $('<li><div class="gendercolorentry"></div></li>');
+        domLi.append(dom);
+               
+        var domInput = $('<input id="cpGenderColor" type="text"/>');
+        dom.append(domInput);
+        domInput.spectrum({
+            color: App.options.genderColours[key][0],
+            change: createGenderColorCPChangeCallback(key)
+        });
+        dom.append(domInput);
+        
+        dom.append(App.options.genderColours[key][1]);
+        
+        App.tools['settings'].genderColourPickers[key] = domInput;
+    }
+    
+    // Defaults button.
+    var domButtons = $('<div class="panelbuttons"></div>');
+    domColours.append(domButtons);
+    
+    var domBtnDefault = $('<button class="btn btn-default">Reset to Defaults</button>');
+    domButtons.append(domBtnDefault);
+    domBtnDefault.click(function(){
+        // Reset colours & color pickers
+        for(var key in App.options.genderColours){
+            App.options.genderColours[key][0] = App.defaults.genderColours[key][0];
+            App.tools['settings'].genderColourPickers[key].spectrum('set', App.options.genderColours[key][0]);
+        }
+        
+        // User entries
+        updateAllUserEntries();
+        
+        // Save to cookie.
+        var ckOptions = JSON.parse(cookie.get('options', JSON.stringify({})));
+        
+        var genderColours = {
+            male:           App.options.genderColours['male'][0],
+            female:         App.options.genderColours['female'][0],
+            herm:           App.options.genderColours['herm'][0],
+            shemale:        App.options.genderColours['shemale'][0],
+            cuntboy:        App.options.genderColours['cuntboy'][0],
+            maleherm:       App.options.genderColours['maleherm'][0],
+            none:           App.options.genderColours['none'][0],
+            transgender:    App.options.genderColours['transgender'][0]
+        };
+        
+        ckOptions.genderColours = genderColours;
+        
+        cookie.set('options', JSON.stringify(ckOptions));
+    });
+}
+
+function createGenderColorCPChangeCallback(gender){
+    return function(color) {
+        App.options.genderColours[gender][0] = color.toHexString();
+        updateAllUserEntries();
+        
+        // Save changes in cookie.
+        
+        // get options cookie.
+        var ckOptions = JSON.parse(cookie.get('options', JSON.stringify({})));
+        
+        var genderColours = {
+            male:           App.options.genderColours['male'][0],
+            female:         App.options.genderColours['female'][0],
+            herm:           App.options.genderColours['herm'][0],
+            shemale:        App.options.genderColours['shemale'][0],
+            cuntboy:        App.options.genderColours['cuntboy'][0],
+            maleherm:       App.options.genderColours['maleherm'][0],
+            none:           App.options.genderColours['none'][0],
+            transgender:    App.options.genderColours['transgender'][0]
+        };
+        
+        ckOptions.genderColours = genderColours;
+        
+        // Save the options cookie.
+        cookie.set('options', JSON.stringify(ckOptions));
+    }
+}
+
 /* Channels */
 function createDomChannelContents(){
     return $('<div class="channelmessages"></div>');
@@ -3336,7 +3482,7 @@ function createDomUserEntry(name, gender, status, statusmsg, slashMe){
     if(name !== 'Description'){
         var domImg = $('<img class="statusimg" src="images/status-small-' + status.toLowerCase() + '.png" title="' + status + '"/>');
         domContainer.append(domImg);
-        genderColour = App.options.genderColours[App.characters[name].gender.toLowerCase()];
+        genderColour = App.options.genderColours[App.characters[name].gender.toLowerCase()][0];
     }
 
     domContainer.append('<div class="nameplate" style="color: ' + genderColour + '" title="' + statusmsg + '">' + (slashMe ? '<i>' : '') + name + (slashMe ? '</i>' : '') + '</i></div>');
@@ -3980,7 +4126,17 @@ $(document).ready(function(){
         }
     });
     
-    // Do we have a cookie?
+    // Load options cookie.
+    var ckOptions = JSON.parse(cookie.get('options', JSON.stringify({})));
+    
+    // Gender colours.
+    if(typeof ckOptions.genderColours !== 'undefined'){
+        for(var key in ckOptions.genderColours){
+            App.options.genderColours[key][0] = ckOptions.genderColours[key];
+        }
+    }
+        
+    // Do we have session a cookie?
     var ckSession = cookie.get('session', 'none');
     if(ckSession === 'none'){
         // Create the login dom

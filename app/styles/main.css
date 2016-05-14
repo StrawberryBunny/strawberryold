@@ -779,6 +779,41 @@ html, body {
     margin-left: 5px;
 } 
 
+/* Tool - Settings */
+.toolsettingsscroller {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.toolsettingsscrollercontents {
+    width: 100%;
+    height: 100%;
+    padding: 10px;
+}
+
+.toolsettingspanel {
+    background-color: #333333;
+    padding: 10px;
+}
+
+.toolsettingspanel .gendercolorentry {
+    margin: 5px;
+}
+
+.sp-replacer {
+    margin-right: 10px;
+}
+
+.toolsettingspanel .panelbuttons {
+    width: 100%;
+    text-align: right;
+}
+
+.toolsettingspanel .btn {
+    margin-top: 10px;    
+}
+
 /* Global */
 
 .userentry {
