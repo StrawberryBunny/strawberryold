@@ -171,10 +171,11 @@ html, body {
     color: #c7c7c7;
 }
 
+/* Don't scroll this.. */
 .channelcontents {
     width: 100%;
     height: 100%;
-    overflow-y: auto;
+    overflow-y: hidden; /*overflow-y: auto;*/
     overflow-x: hidden;
     white-space: nowrap;
     padding: 10px;
@@ -191,6 +192,12 @@ html, body {
 .channelmessages {
     width: 100%;
     height: 100%;
+}
+
+.channelscroller {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
 }
 
 #nochannelimage {
@@ -214,25 +221,36 @@ html, body {
     background-color: #333333;
 }
 
+
+
+
+
 .maininputcontainer {
 	width: 100%;
 	height: 100%;
 }
 
-.bottombuttons {
-	float: right;
-	width: 120px;
-	height: 100%;
-	margin-left: 5px;
-}
-
-#btnsendmessage {
+.textentrycontainer {
     width: 100%;
-	height: 100%;
+    height: 100%;
+    display: flex;
+    
 }
 
-#maininput {
-	width: 100%;
+.textentrytextarea {
+    width: calc(100% - 170px);
+    height: 100%;
+    resize: none;
+}
+
+.textentrybutton {
+    margin-left: 5px;
+    height: 100%;
+    width: 170px;
+}
+
+.channeltextarea {
+    width: 100%;
 	height: 100%;
 	resize: none;
 }

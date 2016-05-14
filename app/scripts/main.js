@@ -586,10 +586,7 @@ function characterWentOffline(character){
 
 function selectPreviousChannelOrPM(index){
     if($('#channellist').children().length === 0){
-        // If there are no channels to move to show the no channel stuff.
-        App.dom.noChannelImage.show();
-        App.dom.userlistTopBar.hide();
-        App.state.selectedChannel = '';
+        selectChannel('');
     }
     else {
         index -= 1;
@@ -623,17 +620,53 @@ function selectChannel(name){
 
     // Turn off the currently selected channel?
     if(App.state.selectedChannel !== ''){
-        turnOffSelectedChannel();
+        // If this is a pm
+        if(App.state.selectedChannel === 'pm'){
+            App.characters[App.state.selectedPM].pms.messageDom.remove();
+            App.characters[App.state.selectedPM].pms.buttonDom.removeClass('fabuttonselected');
+            return;
+        }
+        
+        // Is the selected channel public or private?
+        var isPublic = App.state.selectedChannel.substr(0, 3) !== 'ADH';
+
+        // get the channel list it belongs to
+        var channels = isPublic ? App.publicChannels : App.privateChannels;
+
+        // Remove the message dom.
+        channels[App.state.selectedChannel].scroller.remove();
+        
+        // Remove the text area
+        channels[App.state.selectedChannel].textEntry.remove();
+
+        // Remove the userlist
+        channels[App.state.selectedChannel].userlistDom.remove();
+
+        // Deselect the channel's button
+        channels[App.state.selectedChannel].buttonDom.removeClass('fabuttonselected');
     }
     else {
-        // Turn off the no-channel stuff
-        App.dom.noChannelImage.hide();
+        // Turn off the no-channel bg
+        App.dom.noChannelWrapper.remove();
+        
+        // TextArea
+        App.dom.noChannelTextEntry.remove();
     }
 
     // Turn on the new channel.
     if(name === ''){
-        App.dom.noChannelImage.show();
-        App.dom.userlistTitle.hide();
+        // Attach the no channel bg
+        App.dom.channelContents.append(App.dom.noChannelWrapper);
+                
+        // Attach no channel text area.
+        App.dom.textAreaHolder.append(App.dom.noChannelTextEntry);
+        var textArea = App.dom.noChannelTextEntry.find('textarea');
+        textArea.on('keypress', createChannelTextAreaOnKeyUpCallback(textArea, name)); 
+        var button = App.dom.noChannelTextEntry.find('.textentrybutton');
+        button.on('click', createChannelSendButtonOnKeyUpCallback(textArea, name));
+        
+        // Hide user list title.
+        App.dom.userlistTopBar.hide();
     }
     else {
         // Is the new chanel public or private?
@@ -642,8 +675,16 @@ function selectChannel(name){
         // Get the channel list
         var channels = isPublic ? App.publicChannels : App.privateChannels;
 
-        // Attach the message dom
-        App.dom.channelContents.append(channels[name].messageDom);
+        // Attach the scroller
+        App.dom.channelContents.append(channels[name].scroller);
+
+        // Attach the text area.
+        App.dom.textAreaHolder.append(channels[name].textEntry);
+        // Listener
+        var textArea = channels[name].textEntry.find('textarea');
+        textArea.on('keypress', createChannelTextAreaOnKeyUpCallback(textArea, name)); 
+        var button = channels[name].textEntry.find('.textentrybutton');
+        button.on('click', createChannelSendButtonOnKeyUpCallback(textArea, name));
 
         // Attach the userlist
         App.dom.userlist.append(channels[name].userlistDom);
@@ -684,11 +725,6 @@ function openChannel(name){
     App.state.openChannels.push(name);
 
     // Do we need to create doms for this channel?
-    if(typeof channels[name].messageDom === 'undefined'){
-        var domMessages = createDomChannelContents();
-        channels[name].messageDom = domMessages;
-    }
-
     if(typeof channels[name].userlistDom === 'undefined'){
         var domUserlist = createDomChannelUserlist();
         channels[name].userlistDom = domUserlist;
@@ -699,17 +735,24 @@ function openChannel(name){
         channels[name].buttonDom = domButton;
     }
     
-    /*
     if(typeof channels[name].scroller === 'undefined'){
         var domScroller = createDomChannelScroller();
         channels[name].scroller = domScroller;
     }
     
-    if(typeof channels[name].textArea === 'undefined'){
-        var domTextArea = createDomChannelTextArea();
-        channels[name].textArea = domTextArea; 
+    if(typeof channels[name].textEntry === 'undefined'){
+        var domTextEntry = createDomChannelTextEntry();
+        var textArea = domTextEntry.find('textarea');
+        channels[name].textEntry = domTextEntry;
     }
-    */
+    
+    if(typeof channels[name].messageDom === 'undefined'){
+        var domMessages = createDomChannelContents();
+        channels[name].messageDom = domMessages;
+        
+        // Append this to the channel's scroller.
+        channels[name].scroller.append(domMessages);        
+    }
     
     // Append the dom button to the channel list.
     App.dom.openChannelList.append(channels[name].buttonDom);
@@ -855,29 +898,6 @@ function characterLeftChannel(character, channel){
     channels[channel].listEntry.find('#charcount').text(count - 1);
 }
 
-function turnOffSelectedChannel(){
-    // If this is a pm
-    if(App.state.selectedChannel === 'pm'){
-        turnOffSelectedPM();
-        return;
-    }
-    
-    // Is the selected channel public or private?
-    var isPublic = App.state.selectedChannel.substr(0, 3) !== 'ADH';
-
-    // get the channel list it belongs to
-    var channels = isPublic ? App.publicChannels : App.privateChannels;
-
-    // Remove the message dom.
-    channels[App.state.selectedChannel].messageDom.remove();
-
-    // Remove the userlist
-    channels[App.state.selectedChannel].userlistDom.remove();
-
-    // Deselect the channel's button
-    channels[App.state.selectedChannel].buttonDom.removeClass('fabuttonselected');
-}
-
 function checkForMessageInterupts(message){
     
 }
@@ -894,6 +914,28 @@ function checkForDomInterupts(dom, isPM, chanchar){
         }
     });
     
+}
+
+function createChannelTextAreaOnKeyUpCallback(textArea, channel){
+    return function(e){
+        if(e.which === 13 && !e.shiftKey){
+            e.preventDefault();
+            var result = sendChatMessageToActiveWindow(textArea.val());
+            if(result){
+                textArea.val('');
+            }
+            return;
+        }
+    };
+}
+
+function createChannelSendButtonOnKeyUpCallback(textArea, channel){
+    return function(){
+        var result = sendChatMessageToActiveWindow(textArea.val());
+        if(result){
+            textArea.val('');
+        }
+    }
 }
 
 /**
@@ -1008,10 +1050,6 @@ function closePM(character){
     selectPreviousChannelOrPM(index);
 }
 
-function turnOffSelectedPM(){
-    App.characters[App.state.selectedPM].pms.messageDom.remove();
-    App.characters[App.state.selectedPM].pms.buttonDom.removeClass('fabuttonselected');
-}
 
 function receivePM(character, message, sender){
     // Is a pm for this character open?
@@ -2037,23 +2075,24 @@ function createDomMain(){
                     // Kill interval
                     clearInterval(App.dom.channelListScrolling.channelScrollingInterval);
                 });
-                
-                
-                
-
+                               
+            // Channels.
             var domChannel = $('<div class="channel"></div>');
             domChatArea.append(domChannel);
 
                 var domChannelContents = $('<div class="channelcontents"></div>');
                 domChannel.append(domChannelContents);
                 App.dom.channelContents = domChannelContents;
+                    // Append each channel's scroller + message content to this.
 
+                    // NOChannel Area
                     var domNoChannelWrapper = $('<div class="nochannelwrapper"></div>');
-                    domChannelContents.append(domNoChannelWrapper);
-                    App.dom.noChannelImage = domNoChannelWrapper;
+                    App.dom.noChannelWrapper = domNoChannelWrapper;
+                    App.dom.channelContents.append(domNoChannelWrapper);
 
                         domNoChannelWrapper.append('<img id="nochannelimage" src="images/strawberry-alpha.png"/>');
 
+            // Userlist.
             var domUserList = $('<div class="userlist"></div>');
             domChatArea.append(domUserList);
 
@@ -2073,12 +2112,27 @@ function createDomMain(){
                 domUserList.append(domUserListScroller);
                 App.dom.userlist = domUserListScroller;
 
+    // Text Entry.
     var domTextEntry = $('<div class="textentry"></div>');
     domMain.append(domTextEntry);
     
         var domMainInput = $('<div class="maininputcontainer"></div>');
         domTextEntry.append(domMainInput);
+        App.dom.textAreaHolder = domMainInput;
+        
+            // NoChannel Text Area..
+            var domNoChannelTextEntry = createDomChannelTextEntry();
+            var taNoChannel = domNoChannelTextEntry.find('textarea');
+            App.dom.noChannelTextEntry = domNoChannelTextEntry; 
+            App.dom.textAreaHolder.append(domNoChannelTextEntry);
+            
+            // Attach listener so the user can enter /commands even with no channel open.
+            
+            taNoChannel.on('keypress', createChannelTextAreaOnKeyUpCallback(taNoChannel, ''));
+            
+            // No channel button.
 
+            /*
             var domTextArea = $('<textarea id="maininput"></textarea>');
             domMainInput.append(domTextArea);
             App.dom.mainTextEntry = domTextArea;
@@ -2112,11 +2166,13 @@ function createDomMain(){
                         }
                     }
                 }
-            });
+            });*/
 
+    /*
         var domBottomButtons = $('<div class="bottombuttons"></div>');
         domTextEntry.append(domBottomButtons);
-
+        
+            
             var domTextEntryButton = $('<button id="btnsendmessage" type="submit" class="btn btn-default" autocomplete="off">Send</button>');
             domBottomButtons.append(domTextEntryButton);
             App.dom.mainTextEntryButton = domTextEntryButton;
@@ -2133,6 +2189,7 @@ function createDomMain(){
                     App.dom.mainTextEntry.val('');
                 }
             });
+            */
 
     return domMain;
 }
@@ -3072,8 +3129,16 @@ function createDomChannelScroller(){
     return $('<div class="channelscroller"></div>');
 }
 
-function createDomChannelTextArea(){
-    return $('<textarea class="channeltextarea"></textarea>');
+function createDomChannelTextEntry(){
+    var domContainer = $('<div class="textentrycontainer"></div>');
+    
+    var domTA = $('<textarea class="textentrytextarea"></textarea>');
+    domContainer.append(domTA);
+    
+    var domTextEntryButton = $('<button type="submit" class="textentrybutton btn btn-default" autocomplete="off">Send</button>');
+    domContainer.append(domTextEntryButton);
+    
+    return domContainer;
 }
 
 /* PMs */
