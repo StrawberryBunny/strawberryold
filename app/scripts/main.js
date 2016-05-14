@@ -652,12 +652,15 @@ function selectChannel(name){
             App.characters[App.state.selectedPM].pms.buttonDom.removeClass('fabuttonselected');
             return;
         }
-        
+                
         // Is the selected channel public or private?
         var isPublic = App.state.selectedChannel.substr(0, 3) !== 'ADH';
 
         // get the channel list it belongs to
         var channels = isPublic ? App.publicChannels : App.privateChannels;
+
+        // Record the current scrollTop
+        channels[App.state.selectedChannel].scrollTop = channels[App.state.selectedChannel].scroller.scrollTop();
 
         // Remove the message dom.
         channels[App.state.selectedChannel].scroller.remove();
@@ -729,6 +732,9 @@ function selectChannel(name){
         
         // Focus the text area.
         textArea.focus();
+        
+        // Reset the scroll position
+        channels[name].scroller.scrollTop(channels[name].scrollTop);
     }
 
     // Set newly selected channel
@@ -881,8 +887,20 @@ function receiveMessage(channel, character, message){
     // Check for dom interupts.
     checkForDomInterupts(dom, false, channel, character);
     
+    // Is the scrollbar at the bottom?
+    var domScroller = channels[channel].scroller;
+    var autoScroll = domScroller.scrollTop() >= domScroller[0].scrollHeight - domScroller.height();
+    
     // Append dom.
     channels[channel].messageDom.append(dom);
+        
+    // if the scrollbar is already at the bottom..Scroll down the channel to the new message
+    if(autoScroll){
+        channels[channel].scroller.stop();
+        channels[channel].scroller.animate({
+            scrollTop: channels[channel].messageDom.height()
+        }, 1000);
+    }
 }
 
 function characterJoinedChannel(character, channel){
