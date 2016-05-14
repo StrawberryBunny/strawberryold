@@ -182,7 +182,33 @@ var App = {
                 
                 for(var i = 0; i < App.commands.length; i++){
                     if(App.commands[i]['name'] === e){
-                        pushFeedItem(App.consts.feed.types.info, '[b]' + escapeHtml(App.commands[i]['name']) + '[/b][ul][li][i][color=cyan]Usage[/color][/i]: ' + escapeHtml(App.commands[i]['usage']) + '[/li][li][i][color=cyan]Description[/color][/i]: ' + escapeHtml(App.commands[i]['description']) + '[/li][li][i][color=cyan]Examples[/color][/i]: ' + escapeHtml(App.commands[i]['examples']) + '[/li][li][i][color=cyan]Aliases[/color][/i]: ' + escapeHtml(App.commands[i]['alias']) + '[/li][/ul]', true);
+                        var msg = '[b]' + escapeHtml(App.commands[i]['name']) + '[/b][ul][li][i][color=cyan]Usage[/color][/i]: ' + escapeHtml(App.commands[i]['usage']) + '[/li][li][i][color=cyan]Description[/color][/i]: ' + escapeHtml(App.commands[i]['description']) + '[/li][li][i][color=cyan]Examples[/color][/i]: ';
+                        
+                        var dat = App.commands[i]['examples'];
+                        var examples = '[ul]';
+                        for(var j = 0; j < dat.length; j++){
+                            examples += '[li]';
+                                examples += escapeHtml(dat[j]);
+                            examples += '[/li]';
+                        }                     
+                        examples += '[/ul]';
+                        msg += examples;
+                        
+                        msg += '[/li][li][i][color=cyan]Aliases[/color][/i]: ';
+                        
+                        dat = App.commands[i]['alias'];
+                        var alis = '[ul]';
+                        for(var k = 0; k < dat.length; k++){
+                            alis += '[li]';
+                                alis += '/' + escapeHtml(dat[k]);
+                            alis += '[/li]';
+                        }
+                        alis += '[/ul]';
+                        msg += alis;
+                        
+                        msg += '[/li][/ul]';
+                                                
+                        pushFeedItem(App.consts.feed.types.info, msg, true);
                         return true;
                     }
                 }		
