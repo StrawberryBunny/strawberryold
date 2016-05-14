@@ -151,6 +151,12 @@ html, body {
     text-align: center;
     align-items: center;
     justify-content: center;
+    padding-top: 3px;
+    padding-bottom: 3px;
+}
+
+.channels .fabutton .avatarbutton {
+    margin-top: 5px;
 }
 
 .channels .fabutton img {
@@ -825,7 +831,6 @@ html, body {
 .fabutton {
     cursor: pointer;
     color: #c7c7c7;
-    height: 48px;
     position: relative;
 }
 
@@ -858,10 +863,6 @@ html, body {
     color: #c7c7c7;    
 }
 
-.fabutton:hover .avatarbutton {
-    
-}
-
 .hovertint {
     width: 100%;
     height: 100%;
@@ -874,6 +875,15 @@ html, body {
     background-color: rgba(255, 0, 0, 0.15);
 }
 
+.fabutton .channellabel {
+    display: block;
+    font-size: 10px;
+}
+
+.channels .fabutton {
+    display: flex;
+    flex-direction: column;
+}
 
 .faicon {
     cursor: pointer;

@@ -2520,7 +2520,7 @@ function createDomChannelListEntry(channelName, channelTitle, characterCount){
     
     var domTint = $('<div class="hovertint"></div>');
     domContainer.append(domTint);
-
+    
     domContainer.click(function(){
         // Get the hidden data.
         var chanName = $(this).find('#data').attr('title');
@@ -3265,6 +3265,9 @@ function createDomChannelButton(isPublic, channelName, channelTitle){
     var domTint = $('<div class="hovertint"></div>');
     domMain.append(domTint);
     
+    var domLabel = $('<div class="channellabel">' + channelTitle + '</div>')
+    domMain.append(domLabel);
+    
     return domMain;
 }
 
@@ -3297,6 +3300,9 @@ function createDomPMButton(character){
     
     var domTint = $('<div class="hovertint"></div>');
     domMain.append(domTint);
+    
+    var domLabel = $('<div class="channellabel">' + character + '</div>');
+    domMain.append(domLabel);
     
     var domTypingStatus = $('<span id="typingstatus" class="fa fa-keyboard-o"></span>');
     domMain.append(domTypingStatus);
