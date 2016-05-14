@@ -2517,6 +2517,9 @@ function createDomChannelListEntry(channelName, channelTitle, characterCount){
 
     var domHidden = $('<span id="data" title="' + channelName + '" style="display: none;"></span>');
     domContainer.append(domHidden);
+    
+    var domTint = $('<div class="hovertint"></div>');
+    domContainer.append(domTint);
 
     domContainer.click(function(){
         // Get the hidden data.
