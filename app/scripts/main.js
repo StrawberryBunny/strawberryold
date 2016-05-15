@@ -396,6 +396,132 @@ var App = {
                 }
                 return false;
             }
+        },
+        {
+            name: 'code',
+            usage: '/code',
+            description: 'Pushes a feed item with the current private channel\'s code so you can link the room to other people.',
+            examples: ['/code'],
+            alias: [],
+            func: function(e){
+                if(App.state.selectedChannel === 'pm'){
+                    pushFeedItem('error', 'The /code command only works in private channels.', true, false);
+                    return true;
+                }
+                
+                var isPublic = App.state.selectedChannel.substr(0, 3) !== 'ADH';
+                
+                if(isPublic){
+                    pushFeedItem('error', 'The /code command only works in private channels.', true, false);
+                    return true;
+                }
+                
+                var channels = isPublic ? App.publicChannels : App.privateChannels;
+                pushFeedItem('info', '[ul][li]The code for ' + channels[App.state.selectedChannel].title + ' is ' + App.state.selectedChannel + '[/li][li]To link to the room use [noparse][session=' + channels[App.state.selectedChannel].title + ']' + App.state.selectedChannel + '[/session][/noparse][/li][/ul]', true, false);
+                
+                return true;
+            }
+        },
+        {
+            name: 'makeroom',
+            usage: '/makeroom <channel name>',
+            description: 'Creates a new private, invite only channel which you can invite other characters to or open to the public.',
+            examples: ['/makeroom Some Channel Name', '/makeroom Vork for President'],
+            alias: [],
+            func: function(e){
+                if(typeof e === 'undefined' || e.length === 0){
+                    App.commands[0].func('makeroom');
+                    return false;
+                }
+                
+                sendMessageToServer('CCR { "channel": "' + e + '" }');
+                return true;
+            }
+        },
+        {
+            name: 'invite',
+            usage: '/invite <character name>',
+            description: 'Invite a character into the active channel. You must be a channel owner or operator for the channel to use this command.',
+            examples: ['/invite Strawberry', '/invite Kira'],
+            alias: [],
+            func: function(e){
+                if(typeof e === 'undefined' || e.length === 0){
+                    App.commands[0].func('invite');
+                    return false;
+                }
+                
+                // If PM
+                if(App.state.selectChannel === 'pm'){
+                    pushFeedItem('error', 'You can only invite people into a PM. To chat with more than one person create a room with the /makeroom command. You must use /invite from the channel you wish to invite people to.', true, false);
+                    return true;
+                }
+                
+                // Is our logged in user an op or higher in the current channel
+                var isPublic = App.state.selectedChannel.substr(0, 3) !== 'ADH';
+                var channels = isPublic ? App.publicChannels : App.privateChannels;
+                if(channels[App.state.selectedChannel].ops.indexOf(App.user.loggedInAs) === -1){
+                    pushFeedItem('error', 'You must be a channel owner or operator to invite people into the channel.', true, false);
+                    return true;
+                }                
+                
+                sendMessageToServer('CIU { "channel": "' + App.state.selectedChannel + '", "character": "' + e + '" }')
+                return true;
+            }
+        },
+        {
+            name: 'setdescription',
+            usage: '/setdescription <description>',
+            description: 'Sets the description for a private channel. You must be a channel owner or operator for the channel to use this command.',
+            examples: ['/setdescription Here you can do all the things!', '[noparse]/setdescription [b]The Best Channel[/b] A non descript place where you can do things [icon]Strawberry[/icon][/noparse]'],
+            alias: [],
+            func: function(e){
+                if(typeof e === 'undefined' || e.length === 0){
+                    App.commands[0].func('setdescription');
+                    return false;
+                }
+                
+                // if PM
+                if(App.state.selectedChannel === 'pm'){
+                    pushFeedItem('error', 'You can only use /setdescription in a private channel in which you are owner or operator.', true, false);
+                    return true;
+                }
+                
+                // Is our logged in user in the current channel
+                var isPublic = App.state.selectedChannel.substr(0, 3) !== 'ADH';
+                var channels = isPublic ? App.publicChannels : App.privateChannels;
+                if(channels[App.state.selectedChannel].ops.indexOf(App.user.loggedInAs) === -1){
+                    pushFeedItem('error', 'You must be the onwer or operator to invite people into the channel.', true, false);
+                    return true;
+                }
+                
+                sendMessageToServer('CDS { "channel": "' + App.state.selectedChannel + '", "description": "' + escapeJson(e) + '" }');
+                return true;
+            }
+        },
+        {
+            name: 'openroom',
+            usage: '/openroom',
+            description: 'Opens up the active private channel. Other users will then be able to see the room in their channel list. You must be a channel owner or operator to use this command.',
+            examples: ['/openroom'],
+            alias: [],
+            func: function(e){
+                // Ensure the active channel is a private room.
+                if(App.state.selectedChannel === 'pm'){
+                    pushFeedItem('error', 'You can only use /openroom in a private channel in which you are owner or operator.', true, false);
+                    return true;
+                }
+                
+                // Is our logged in user in the current channel
+                var isPublic = App.state.selectedChannel.substr(0, 3) !== 'ADH';
+                var channels = isPublic ? App.publicChannels : App.privateChannels;
+                if(channels[App.state.selectedChannel].ops.indexOf(App.user.loggedInAs) === -1){
+                    pushFeedItem('error', 'You must be the owner or operator to invate people into the channel.', true, false);
+                    return true;
+                }
+                
+                sendMessageToServer('RST { "channel": "' + App.state.selectedChannel + '", "status": "public" }');
+                return true;
+            }
         }
     ]
 };
@@ -3435,7 +3561,7 @@ function createDomToolSettings(){
         updateAllUserEntries();
         
         // Save to cookie.
-        var ckOptions = JSON.parse(cookie.get('options', JSON.stringify({})));
+        var ckOptions = JSON.parse(cookie.get('options', JSON.stringify({}), { expires: 999999 }));
         
         var genderColours = {
             male:           App.options.genderColours['male'][0],
@@ -3450,7 +3576,7 @@ function createDomToolSettings(){
         
         ckOptions.genderColours = genderColours;
         
-        cookie.set('options', JSON.stringify(ckOptions));
+        cookie.set('options', JSON.stringify(ckOptions), { expires: 999999 });
     });
     
     // Mentions
@@ -3470,7 +3596,7 @@ function createDomToolSettings(){
         // Load the options.
         var ckOptions = JSON.parse(cookie.get('options', JSON.stringify({})));
         ckOptions.mentions = $(this).val().split(',');
-        cookie.set('options', JSON.stringify(ckOptions));
+        cookie.set('options', JSON.stringify(ckOptions), { expires: 999999 });
         
         // Set new options.
         App.options.mentions = $(this).val().split(',');
@@ -3495,7 +3621,7 @@ function createDomToolSettings(){
     domStartupInput.on('keyup', function(e){
         var ckOptions = JSON.parse(cookie.get('options', JSON.stringify({})));
         ckOptions.startUpChannels = $(this).val().split(',');
-        cookie.set('options', JSON.stringify(ckOptions));
+        cookie.set('options', JSON.stringify(ckOptions), { expires: 999999 });
     });
 }
 
@@ -3523,7 +3649,7 @@ function createGenderColorCPChangeCallback(gender){
         ckOptions.genderColours = genderColours;
         
         // Save the options cookie.
-        cookie.set('options', JSON.stringify(ckOptions));
+        cookie.set('options', JSON.stringify(ckOptions), { expires: 999999 });
     }
 }
 
@@ -4137,8 +4263,14 @@ function parseServerMessage(message){
             break;
         case 'SYS':
             // System message from the server.
-            if(obj.message.indexOf("has been removed from the moderator list for") === -1 && obj.message.indexOf("has been added to the moderator list for") === -1){
+            if(obj.message.indexOf("This channel is now [b]public.[/b]") !== -1){
+                var channelName = obj.channel.substr(0, 3).toUpperCase() + obj.channel.substr(3);
+                pushFeedItem('info', App.privateChannels[channelName].title + ' is now [b]public.[/b]', true, false);
+                return;
+            }
+            else if(obj.message.indexOf("has been removed from the moderator list for") === -1 && obj.message.indexOf("has been added to the moderator list for") === -1){
                 console.log(message);
+                return;
             }            
             break;
         case 'TPN':
