@@ -1025,6 +1025,9 @@ function openChannel(name){
         selectChannel(channelName);
     });
 
+    // Sort the userlist.
+    sortUserList(name);
+
     // (Re)Create the userlist
     channels[name].userlistDom.empty();
     for(var i = 0; i < channels[name].users.length; i++){
@@ -2051,6 +2054,41 @@ function isCharacterOurFriend(character, allCharacters){
     }   
     
     return false;
+}
+
+function sortUserList(channelName){
+    var isPublic = channelName.substr(0, 3) !== 'ADH';
+    var channels = isPublic ? App.publicChannels : App.privateChannels;
+    channels[channelName].users.sort(function(a, b){
+        // Is this user a global admin?
+		var isAdminA = App.ops.indexOf(a) != -1;
+		var isAdminB = App.ops.indexOf(b) != -1;
+		var isChatOpA = channels[channelName]['ops'].indexOf(a) != -1;
+		var isChatOpB = channels[channelName]['ops'].indexOf(b) != -1;
+		
+		if(isAdminA && isAdminB){
+			// Sort on alpha
+			if(a < b) return 1
+			else if(a > b) return -1;
+			else return 0;
+		}
+		else if(isChatOpA && isChatOpB){
+			// Sort on alpha
+			if(a < b) return 1
+			else if(a > b) return -1;
+			else return 0;
+		}
+		else if(isAdminA && !isAdminB) return -1;
+		else if(!isAdminA && isAdminB) return 1;
+		else if(isChatOpA && !isChatOpB) return -1;
+		else if(!isChatOpA && isChatOpB) return 1;
+		else {
+			// sort on alpha
+			if(a < b) return -1
+			else if(a > b) return 1;
+			else return 0;
+		}		
+    });
 }
 
 /**
