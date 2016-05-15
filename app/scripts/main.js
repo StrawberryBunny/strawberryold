@@ -1032,14 +1032,14 @@ function openChannel(name){
     // How do I know if this room is private & locked?    
         
     // If this channel is listed (Ie not a private/locked room.);
-    /*if(typeof channels[name].listEntry !== 'undefined'){
+    if(typeof channels[name].listEntry !== 'undefined'){
         // Set this channel's entry in the room list to on.
         channels[name].listEntry.addClass('selected');    
     
         // Update this channel's entry in the room list's char count
         var count = parseInt(channels[name].listEntry.find('#charcount').text());
         channels[name].listEntry.find('#charcount').text(count + 1);
-    }*/
+    }
 
     // If no channel is selected, select this one
     if(App.state.selectedChannel === ''){
