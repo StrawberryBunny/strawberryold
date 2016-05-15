@@ -875,6 +875,8 @@ html, body {
     cursor: pointer;
     color: #c7c7c7;
     position: relative;
+    overflow: hidden;
+    word-wrap: break-word;
 }
 
 .fabutton:hover {
@@ -921,6 +923,7 @@ html, body {
 .fabutton .channellabel {
     display: block;
     font-size: 10px;
+    width: 100%;
 }
 
 .channels .fabutton {
