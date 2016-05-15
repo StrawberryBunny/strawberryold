@@ -572,7 +572,7 @@ function updateStatus(character, status, statusmsg){
     App.characters[character].status = status;
     App.characters[character].statusmsg = statusmsg;
     
-    console.log("Updating status for " + character);
+    console.log("Updating status for " + character + ", to " + status + " , " + statusmsg);
 
     // If us
     if(character === App.user.loggedInAs){
@@ -589,7 +589,6 @@ function updateStatus(character, status, statusmsg){
             statusimg.attr('src', 'images/status-small-' + status.toLowerCase() + '.png');
             statusimg.attr('title', stylizeStatus(status));
             nameplate.attr('title', statusmsg);
-            console.log("Found a random userentry on the current dom: " + character);
         }
     });
     
@@ -919,6 +918,18 @@ function openChannel(name){
     if(App.state.selectedChannel === ''){
         selectChannel(name);
     }
+    
+    // Update any userentries we can find in the message dom.
+    channels[name].messageDom.find('.userentry').each(function(){
+        var nameplate = $(this).children('.nameplate');
+        var character = nameplate.text();
+        
+        var statusimg = $(this).find('.statusimg');
+        statusimg.attr('src', 'images/status-small-' + App.characters[character].status.toLowerCase() + '.png');
+        statusimg.attr('title', stylizeStatus(App.characters[character].status));
+        nameplate.attr('title', App.characters[character].statusmsg);
+    });
+    
 }
 
 function leaveChannel(name){
@@ -940,7 +951,7 @@ function closeChannel(name){
 
     // Remove doms.
     channels[name].buttonDom.remove();
-    channels[name].messageDom.remove();
+    channels[name].scroller.remove();
     channels[name].userlistDom.remove();   
     
     // remove form open channel list
@@ -961,7 +972,6 @@ function closeChannel(name){
     
     // What next?
     selectPreviousChannelOrPM(index);
-    
 }
 
 function receiveMessage(channel, character, message, buzz){
@@ -975,7 +985,7 @@ function receiveMessage(channel, character, message, buzz){
     // Check for anything we want to affect
     
     // Create dom
-    var dom = createDomMessage(character, message);
+    var dom = createDomMessage(character, message, channel);
     
     // Check for dom interupts.
     checkForDomInterupts(dom, false, channel, character);
@@ -1170,7 +1180,7 @@ function selectPM(character){
     else {
         // Attach the message dom
         App.dom.channelContents.append(App.characters[character].pms.scroller);
-
+        
         // Select the channel's button
         App.characters[character].pms.buttonDom.addClass('fabuttonselected');
         
@@ -3620,13 +3630,13 @@ function createDomUserEntry(name, gender, status, statusmsg, slashMe, channel){
             // Make image dom.
             if(isPublic){
                 // Is the user an op in this channel?
-                if(channels[channel].ops.indexOf(name) !== -1){
-                    var domOpImg = $('<img class="opimage" src="images/gem-small-op.png" title="Official Channel Operator"/>');
+                if(App.ops.indexOf(name) !== -1){
+                    var domOpImg = $('<img class="opimage" src="images/gem-small-op.png" title="Global Operator"/>');
                     domContainer.append(domOpImg);
                 }
-                else if(App.ops.indexOf(name) !== -1){
+                else if(channels[channel].ops.indexOf(name) !== -1){
                     // Is the user a global admin?
-                    var domOpImg = $('<img class="opimage" src="images/gem-small-admin.png" title="Offical Chat Operator"/>');
+                    var domOpImg = $('<img class="opimage" src="images/gem-small-admin.png" title="Channel Operator"/>');
                     domContainer.append(domOpImg);
                 }
             }
@@ -3648,7 +3658,7 @@ function createDomUserEntry(name, gender, status, statusmsg, slashMe, channel){
     return domContainer;
 }
 
-function createDomMessage(character, message){
+function createDomMessage(character, message, channel){
     var isMe = message.substr(0, 3) === '/me';
     
     var domContainer = $('<div class="message"></div>');
@@ -3663,7 +3673,7 @@ function createDomMessage(character, message){
         var gender = App.characters[character].gender;
         var status = App.characters[character].status;
         var statusmsg = App.characters[character].statusmsg;
-        var userEntry = createDomUserEntry(character, gender, status, statusmsg, isMe);
+        var userEntry = createDomUserEntry(character, gender, status, statusmsg, isMe, channel);
         domContainer.append(userEntry);
         if(!isMe){
             message = ': ' + message;
@@ -3755,7 +3765,8 @@ function parseServerMessage(message){
         var obj = JSON.parse(message.substr(3));
     }
 
-    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'ORS', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'NLN', 'JCH', 'LCH', 'ERR', 'FLN', 'PRI', 'TPN', 'MSG', 'STA'];
+    var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'ORS', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'NLN', 'JCH', 'LCH', 'ERR', 'FLN', 'PRI', 'TPN', 'MSG', 'STA',
+                    'COA', 'COR'];
     if(dontLog.indexOf(tag) === -1){
         console.log(message);
     }
@@ -3824,6 +3835,29 @@ function parseServerMessage(message){
             break;
         case 'COA':
             // Promotes a user to channel operator
+            
+            // Update .userentry in channel.
+            var isPublic = obj.channel.substr(0, 3) !== 'ADH';
+            var channels = isPublic ? App.publicChannels : App.privateChannels;
+            
+            // userlist.
+            channels[obj.channel].userlistDom.find('.userentry').each(function(){
+                var nameplate = $(this).children('.nameplate');
+                if(nameplate.text() === obj.character){
+                    $(this).find('.statusimg').after('<img class="opimage" src="images/chevron-small-op.png" title="Channel Operator"/>');
+                }
+            });
+                 
+            // Messagedom
+            channels[obj.channel].messageDom.find('.userentry').each(function(){
+                var nameplate = $(this).children('.nameplate');
+                if(nameplate.text() === obj.character){
+                    $(this).find('.statusimg').after('<img class="opimage" src="images/chevron-small-op.png" title="Channel Operator"/>');
+                }
+            });
+                       
+            // Feed
+            pushFeedItem('info', obj.character + ' was given op status in ' + channels[obj.channel].title, false, true);
             break;
         case 'COL':
             // Gives a list of chat ops. Sent in response to JCH
@@ -3843,6 +3877,29 @@ function parseServerMessage(message){
             break;
         case 'COR':
             // Removes a channel operator.
+            
+            // Update .userentry in channel
+            var isPublic = obj.channel.substr(0, 3) !== 'ADH';
+            var channels = isPublic ? App.publicChannels : App.privateChannels;
+            
+            // userlist.
+            channels[obj.channel].userlistDom.find('.userentry').each(function(){
+                var nameplate = $(this).find('.nameplate');
+                if(nameplate.text() === obj.character){
+                    $(this).find('.opimage').remove();
+                }
+            });
+            
+            // Message dom
+            channels[obj.channel].messageDom.find('.userentry').each(function(){
+                var nameplate = $(this).find('.nameplate');
+                if(nameplate.text() === obj.character){
+                    $(this).find('.opimage').remove();
+                }
+            });
+            
+            // Feed
+            pushFeedItem('info', obj.character + "'s op status in " + channels[obj.channel].title + " was revoked.", false, true);            
             break;
         case 'CSO':
             // Sets the owner of the current channel to the character provided.
@@ -4080,7 +4137,9 @@ function parseServerMessage(message){
             break;
         case 'SYS':
             // System message from the server.
-            console.log(message);
+            if(obj.message.indexOf("has been removed from the moderator") === -1 && obj.message.indexOf("has been added to the meoderator") === -1){
+                console.log(message);
+            }            
             break;
         case 'TPN':
             // A user informs us of their typing status.
