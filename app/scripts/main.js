@@ -1130,7 +1130,7 @@ function receiveMessage(channel, character, message, buzz){
         
     // if the scrollbar is already at the bottom..Scroll down the channel to the new message
     if(autoScroll){
-        channels[channel].scroller.stop();
+        channels[channel].scroller.stop(true);        
         channels[channel].scroller.animate({
             scrollTop: channels[channel].scroller[0].scrollHeight
         }, 1000);
@@ -1345,7 +1345,7 @@ function selectPM(character){
     App.state.selectedPM = character;
     
     // Turn off aniamtions.
-    App.characters[character].pms.buttonDom.stop();
+    App.characters[character].pms.buttonDom.stop(true);
     App.characters[character].pms.buttonDom.css('background-color', '');
 }
 
@@ -1453,7 +1453,7 @@ function receivePM(character, message, sender){
     
     // if the scrollbar is already at the bottom..Scroll down the channel to the new message
     if(autoScroll){
-        App.characters[character].pms.scroller.stop();
+        App.characters[character].pms.scroller.stop(true);
         App.characters[character].pms.scroller.animate({
             scrollTop: App.characters[character].pms.scroller[0].scrollHeight
         }, 1000);
@@ -1630,7 +1630,7 @@ function displayNextFeedMessage(iterate){
 
     // if the scrollbar is already at the bottom..Scroll down the feed to the new message
     if(autoScroll){
-        App.tools['feed'].scroller.stop();
+        App.tools['feed'].scroller.stop(true);
         App.tools['feed'].scroller.animate({
             scrollTop: App.tools['feed'].messagePush.height()
         }, 1000);
@@ -1845,7 +1845,7 @@ function pushImageToPictures(url, sender, message, showPictures){
     }
     
     // Scroll pictures content to new element.
-    App.tools['pictures'].scroller.stop();
+    App.tools['pictures'].scroller.stop(true);
     App.tools['pictures'].scroller.animate({
         scrollTop: App.tools['pictures'].scrollerContent.height()
     }, 2000);
@@ -1963,7 +1963,7 @@ function toggleTool(toolName, manual){
         if(!isPM){
             var isPublic = App.state.selectedChannel.substr(0, 3) !== 'ADH';
             var channels = isPublic ? App.publicChannels : App.privateChannels;
-            channels[App.state.selectedChannel].scroller.stop();
+            channels[App.state.selectedChannel].scroller.stop(true);
             channels[App.state.selectedChannel].scroller.scrollTop(channels[App.state.selectedChannel].scroller[0].scrollHeight);
         }
         else {
