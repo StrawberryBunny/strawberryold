@@ -698,8 +698,6 @@ function updateStatus(character, status, statusmsg){
     App.characters[character].status = status;
     App.characters[character].statusmsg = statusmsg;
     
-    console.log("Updating status for " + character + ", to " + status + " , " + statusmsg);
-
     // If us
     if(character === App.user.loggedInAs){
         //pushFeedItem(App.consts.feed.types.info, 'Your status has been updated successfully.'); ( No need for feed item anymore. Status panel gives good feedback.");
@@ -3673,11 +3671,7 @@ function createDomChannelUserlist(){
 
 function createDomChannelButton(isPublic, channelName, channelTitle){
     var domMain = $('<div id="channel-' + stripWhitespace(channelName) + '" class="fabutton" title="' + channelTitle + '"></div>');
-    
-    if(!isPublic){
-        console.log("channel: " + channelName + ", locked: " + App.privateChannels[channelName].locked);
-    }
-    
+        
     var domIcon = $('<span id="data" title="' + channelName + '"></span><span class="fa ' + (isPublic ? 'fa-th' : App.privateChannels[channelName].locked ? 'fa-lock' : 'fa-unlock') + '"></span>');
     domMain.append(domIcon);
     
@@ -3905,7 +3899,7 @@ function parseServerMessage(message){
     }
 
     var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'ORS', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'NLN', 'JCH', 'LCH', 'ERR', 'FLN', 'PRI', 'TPN', 'MSG', 'STA',
-                    'COA', 'COR', 'SYS'];
+                    'COA', 'COR', 'SYS', 'LIS'];
     if(dontLog.indexOf(tag) === -1){
         console.log(message);
     }
@@ -4010,7 +4004,6 @@ function parseServerMessage(message){
                 channels[obj.channel] = {};
                 if(!isPublic){
                     channels[obj.channel].locked = true;
-                    console.log("Channel entry for " + obj.channel + " created from COL. Locked set true.");
                 }
             }
             
@@ -4109,7 +4102,6 @@ function parseServerMessage(message){
                 channels[obj.channel] = {};
                 if(!isPublic){
                     channels[obj.channel].locked = true;
-                    console.log("Channel " + obj.channel + " created from ICH. Locked set to true.");
                 }
             }
             
@@ -4269,8 +4261,6 @@ function parseServerMessage(message){
             for(i = 0; i < obj.channels.length; i++){
                 if(typeof App.privateChannels[obj.channels[i].name] === 'undefined'){
                     App.privateChannels[obj.channels[i].name] = {};
-                    
-                    console.log("Channel " + obj.channels[i].name + " created from ORS. Locked set to false.");
                 }
 
                 App.privateChannels[obj.channels[i].name].name = obj.channels[i].name;
