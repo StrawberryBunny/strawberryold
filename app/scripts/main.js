@@ -1566,7 +1566,8 @@ function pushFeedItem(type, message, showFeed, count, sender){
     });
 
     // Push message into queue
-    App.tools['feed'].queue.push([type, bb.html, sender]);
+    var queueObj = [type, bb.html, sender];
+    App.tools['feed'].queue.push(queueObj);
 
     // If the feed is open, display the message immediately.
     if(App.state.currentTool === 'feed' && App.tools['feed'].currentlyDisplaying === false){
@@ -1579,7 +1580,26 @@ function pushFeedItem(type, message, showFeed, count, sender){
         App.tools['feed'].counter.text.fadeIn();
     }
     
-    if(showFeed && App.state.currentTool !== 'feed' && typeof App.tools['feed'].content !== 'undefined'){
+    
+    
+    // If the feed panel isn't open..
+    // Show this message in the chat?
+    
+    if(App.state.currentTool !== 'feed' && App.state.selectedChannel !== '' && type !== App.consts.feed.types.pm){
+        var domMsg = createDomToolFeedMessage(queueObj[0], queueObj[1], queueObj[2]);
+        var messageDom;
+        if(App.state.selectedChannel === 'pm'){
+            messageDom = App.characters[App.state.selectedPM].pms.messageDom;
+        }
+        else {
+            var isPublic = App.state.selectedChannel.substr(0, 3) !== 'ADH';
+            var channels = isPublic ? App.publicChannels : App.privateChannels;
+            messageDom = channels[App.state.selectedChannel].messageDom;
+        }
+        
+        messageDom.append(domMsg);
+    }
+    else if(showFeed && App.state.currentTool !== 'feed' && typeof App.tools['feed'].content !== 'undefined'){
         toggleTool('feed');
         displayQueuedFeedMessages();
     }
@@ -1652,6 +1672,12 @@ function displayNextFeedMessage(iterate){
     if((type === 'pm' && App.tools['feed'].filterPMs) || (type === 'info' && App.tools['feed'].filterInfo) || (type === 'friendinfo' && App.tools['feed'].filterFriendActivity) || 
         (type === 'bookmarkinfo' && App.tools['feed'].filterBookmarkActivity) || (type === 'error' && App.tools['feed'].filterErrors) || (type === 'mention' && App.tools['feed'].filterMentions)){
         domMsg.delay(2000).slideUp();
+    }
+    
+    // If this was a PM, stop the PM channel button flashing.
+    if(type === App.consts.feed.types.pm){
+        App.characters[feedEntry[2]].pms.buttonDom.stop(true);
+        App.characters[feedEntry[2]].pms.buttonDom.css('background-color', '');
     }
 }
 
@@ -3107,14 +3133,18 @@ function createDomToolFeedMessage(type, message, sender){
     if(type === 'pm'){   
         message = ': ' + message;
         
-        var domBtnView = $('<span class="faicon fa fa-eye"></span>');
+        var domBtnView = $('<span class="faicon fa fa-eye" title="View ' + sender + '"></span>');
         domTopButtons.append(domBtnView);
         domBtnView.click(function(){
             targetViewerFor($(this).parent().parent().parent().parent().parent().find('#data').attr('title')); // parentception
             toggleTool('viewer');
         });
         
-        var domBtnReply = $('<span class="faicon fa fa-reply"></span>');
+        var domBtnPM = $('<span class="faicon fa fa-comments" title="Goto PM"></span>');
+        domTopButtons.append(domBtnPM);
+        domBtnPM.click(createFeedPMGotoPMButtonClickCallback(sender, domMsg));
+        
+        var domBtnReply = $('<span class="faicon fa fa-reply" title="Reply Here"></span>');
         domRBTwo.append(domBtnReply);
         domBtnReply.click(function(){
             // Append the reply box
@@ -3184,6 +3214,24 @@ function createDomToolFeedMessage(type, message, sender){
     
     // return
     return domMsg;
+}
+
+function createFeedPMGotoPMButtonClickCallback(sender, dom){
+    return function(){
+        // If the PM isn't open..
+        if(App.state.openPMs.indexOf(sender) === -1){
+            openPM(sender);
+        }
+        else {
+            // Just select the open PM.
+            selectPM(sender);
+        }
+        
+        // Close the dom.
+        dom.slideUp(function(){
+            $(this).remove();
+        });
+    };
 }
 
 function createDomToolViewer(){
