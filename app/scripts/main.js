@@ -1904,6 +1904,24 @@ function toggleTool(toolName, manual){
     if(App.state.currentTool === toolName){
         toolName = '';
     }
+    
+    // Is a channel open?
+    var isScrollerAtBottom = false;
+    if(App.state.selectedChannel !== ''){
+        var isPM = App.state.selectedChannel === 'pm';
+        var scrollingDom;
+        if(!isPM){
+            var isPublic = App.state.selectedChannel.substr(0, 3) !== 'ADH';
+            var channels = isPublic ? App.publicChannels : App.privateChannels;
+            scrollingDom = channels[App.state.selectedChannel].scroller;
+        }
+        else {
+            scrollingDom = App.characters[App.state.selectedPM].pms.scroller;
+        }
+        
+        // Is the scrolling dom at the bottom?
+        isScrollerAtBottom = scrollingDom.scrollTop() >= scrollingDom[0].scrollHeight - scrollingDom.height() - (20);
+    }
 
     // Turn off the old tool
     if(App.state.currentTool !== ''){
@@ -1933,6 +1951,21 @@ function toggleTool(toolName, manual){
 
     // Layout
     layout();
+    
+    // If the scroller was at the bottom before this..
+    if(App.state.selectedChannel !== '' && isScrollerAtBottom){
+        // Ensure it's still at the bottom
+        var isPM = App.state.selectedChannel === 'pm';
+        if(!isPM){
+            var isPublic = App.state.selectedChannel.substr(0, 3) !== 'ADH';
+            var channels = isPublic ? App.publicChannels : App.privateChannels;
+            channels[App.state.selectedChannel].scroller.stop();
+            channels[App.state.selectedChannel].scroller.scrollTop(channels[App.state.selectedChannel].scroller[0].scrollHeight);
+        }
+        else {
+            App.characters[App.state.selectedPM].pms.scroller.scrollTop(App.characters[App.state.selectedPM].pms.scroller[0].scrollHeight);
+        }
+    }
 }
 
 function layout(){
