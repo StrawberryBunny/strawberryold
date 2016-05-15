@@ -85,7 +85,7 @@ var App = {
         }
     },
     consts: {
-        version: '0.2',
+        version: '0.3',
         logInTimeout: 2500,
         icons: {
             loading: [
@@ -180,7 +180,8 @@ var App = {
 		timestamps: true
 	},
     changelog: [
-        ['0.2', ['First changelog! Woo!', 'Nothing\'s really changed yet, though.', 'Moved from a simple notepad++ set-up to using Gulp to build my files and Bower for dependency management.']]
+        ['0.2', ['First changelog! Woo!', 'Nothing\'s really changed yet, though.', 'Moved from a simple notepad++ set-up to using Gulp to build my files and Bower for dependency management.']],
+        ['0.3', ['Channel buttons now include a label.', 'Locked and unlocked rooms now display.', 'Implemented /makeroom, /openroom, /code, /invite and /setdescription commands for private channels.', 'Various sweeping fixus and tweaks.']]
     ],
     commands: [
         {
