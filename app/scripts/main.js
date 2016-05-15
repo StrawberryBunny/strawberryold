@@ -3766,7 +3766,7 @@ function parseServerMessage(message){
     }
 
     var dontLog = ['PIN', 'IDN', 'VAR', 'HLO', 'ORS', 'CON', 'FRL', 'IGN', 'ADL', 'UPT', 'CHA', 'ICH', 'CDS', 'COL', 'JCH', 'NLN', 'JCH', 'LCH', 'ERR', 'FLN', 'PRI', 'TPN', 'MSG', 'STA',
-                    'COA', 'COR'];
+                    'COA', 'COR', 'SYS'];
     if(dontLog.indexOf(tag) === -1){
         console.log(message);
     }
@@ -4137,7 +4137,7 @@ function parseServerMessage(message){
             break;
         case 'SYS':
             // System message from the server.
-            if(obj.message.indexOf("has been removed from the moderator") === -1 && obj.message.indexOf("has been added to the meoderator") === -1){
+            if(obj.message.indexOf("has been removed from the moderator list for") === -1 && obj.message.indexOf("has been added to the moderator list for") === -1){
                 console.log(message);
             }            
             break;
