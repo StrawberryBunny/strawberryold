@@ -3875,6 +3875,11 @@ function createDomMessage(character, message, channel){
     
     var domContainer = $('<div class="message"></div>');
     
+    // Is this our message?
+    if(character === App.user.loggedInAs){
+        domContainer.addClass('ourmessage');
+    }    
+    
     if(character.toLowerCase() === 'description'){
         message = '[b]Description[/b]: ' + message;
     }

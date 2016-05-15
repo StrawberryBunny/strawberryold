@@ -852,6 +852,10 @@ html, body {
     
 }
 
+.ourmessage {
+    background-color: #2d4461;
+}
+
 .messagetext {
     display: inline;
     word-wrap: break-word;
