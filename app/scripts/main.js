@@ -1178,7 +1178,7 @@ function characterLeftChannel(character, channel){
     var channels = isPublic ? App.publicChannels : App.privateChannels;
     
     // Remove from list
-    var removed = channels[channel].users.splice(character, 1);
+    var removed = channels[channel].users.splice(channels[channel].users.indexOf(character), 1);
     if(typeof removed === 'undefined'){
         // Tried to remove a character from a room but they weren't in there? Wtf.
         pushFeedItem(App.consts.feed.types.error, 'Server informed us that ' + character + ' left ' + channel + ' but we did not have them listed.', true);
