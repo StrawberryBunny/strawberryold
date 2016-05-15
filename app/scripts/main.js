@@ -1330,6 +1330,9 @@ function selectPM(character){
         
         // Reset the scroll position
         App.characters[character].pms.scroller.scrollTop(App.characters[character].pms.scrollTop);
+        
+        // Focus the text area.
+        textArea.focus();
     }
     
     // Set newly selected channel
