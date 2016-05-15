@@ -451,8 +451,8 @@ var App = {
                 }
                 
                 // If PM
-                if(App.state.selectChannel === 'pm'){
-                    pushFeedItem('error', 'You can only invite people into a PM. To chat with more than one person create a room with the /makeroom command. You must use /invite from the channel you wish to invite people to.', true, false);
+                if(App.state.selectedChannel === '' || App.state.selectChannel === 'pm'){
+                    pushFeedItem('error', 'You can only invite people into a channel. To chat with more than one person create a room with the /makeroom command. You must use /invite from the channel you wish to invite people to.', true, false);
                     return true;
                 }
                 
@@ -481,7 +481,7 @@ var App = {
                 }
                 
                 // if PM
-                if(App.state.selectedChannel === 'pm'){
+                if(App.state.selectedChannel === '' && App.state.selectedChannel === 'pm'){
                     pushFeedItem('error', 'You can only use /setdescription in a private channel in which you are owner or operator.', true, false);
                     return true;
                 }
@@ -506,7 +506,7 @@ var App = {
             alias: [],
             func: function(e){
                 // Ensure the active channel is a private room.
-                if(App.state.selectedChannel === 'pm'){
+                if(App.state.selectedChannel === '' || App.state.selectedChannel === 'pm'){
                     pushFeedItem('error', 'You can only use /openroom in a private channel in which you are owner or operator.', true, false);
                     return true;
                 }
@@ -1030,15 +1030,17 @@ function openChannel(name){
         channels[name].userlistDom.append(dom);
     }
         
+    // How do I know if this room is private & locked?    
+        
     // If this channel is listed (Ie not a private/locked room.);
-    if(typeof channels[name].listEntry !== 'undefined'){
+    /*if(typeof channels[name].listEntry !== 'undefined'){
         // Set this channel's entry in the room list to on.
         channels[name].listEntry.addClass('selected');    
     
         // Update this channel's entry in the room list's char count
         var count = parseInt(channels[name].listEntry.find('#charcount').text());
         channels[name].listEntry.find('#charcount').text(count + 1);
-    }
+    }*/
 
     // If no channel is selected, select this one
     if(App.state.selectedChannel === ''){
@@ -1165,9 +1167,11 @@ function characterJoinedChannel(character, channel){
         channels[channel].userlistDom.append(dom);
     }
     
-    // Update this channel's entry in the channel list.
-    var count = parseInt(channels[channel].listEntry.find('#charcount').text());
-    channels[channel].listEntry.find('#charcount').text(count + 1);
+    // Update this channel's entry in the channel list. (The room is private and not opened it won't be in the channel list.)
+    if(typeof channels[channel].listEntry !== 'undefined'){
+        var count = parseInt(channels[channel].listEntry.find('#charcount').text());
+        channels[channel].listEntry.find('#charcount').text(count + 1);
+    }
 }
 
 function characterLeftChannel(character, channel){
@@ -1190,8 +1194,10 @@ function characterLeftChannel(character, channel){
     });
     
     // Update this channel's entry in the channel list.
-    var count = parseInt(channels[channel].listEntry.find('#charcount').text());
-    channels[channel].listEntry.find('#charcount').text(count - 1);
+    if(typeof channels[channel].listEntry !== 'undefined'){
+        var count = parseInt(channels[channel].listEntry.find('#charcount').text());
+        channels[channel].listEntry.find('#charcount').text(count - 1);
+    }
 }
 
 function checkForMessageInterupts(message){
@@ -1478,7 +1484,7 @@ function channelListUpdated(){ // Called from parseServerMessage() when the publ
     // Stop the refresh button spinning
     App.tools['channels'].refreshbutton.removeClass('fa-spin');
 
-    // Clear any existing channel entries
+    // Clear any existing channel dom entries
     App.tools['channels'].entryPush.empty();
     App.tools['channels'].channelEntries = [];
 
@@ -1512,7 +1518,10 @@ function channelListUpdated(){ // Called from parseServerMessage() when the publ
 
     var privateList = [];
     for(key in App.privateChannels){
-        privateList.push([App.privateChannels[key].title, key]);
+        // Only open channels.
+        if(App.privateChannels[key].locked === false && !App.privateChannels[key].invalidated){
+            privateList.push([App.privateChannels[key].title, key]);
+        }
     }
     privateList.sort(function(a, b){
         var titleA = a[0].toLowerCase();
@@ -3665,7 +3674,11 @@ function createDomChannelUserlist(){
 function createDomChannelButton(isPublic, channelName, channelTitle){
     var domMain = $('<div id="channel-' + stripWhitespace(channelName) + '" class="fabutton" title="' + channelTitle + '"></div>');
     
-    var domIcon = $('<span id="data" title="' + channelName + '"></span><span class="fa ' + (isPublic ? 'fa-th' : 'fa-key') + '"></span>');
+    if(!isPublic){
+        console.log("channel: " + channelName + ", locked: " + App.privateChannels[channelName].locked);
+    }
+    
+    var domIcon = $('<span id="data" title="' + channelName + '"></span><span class="fa ' + (isPublic ? 'fa-th' : App.privateChannels[channelName].locked ? 'fa-lock' : 'fa-unlock') + '"></span>');
     domMain.append(domIcon);
     
     var domTint = $('<div class="hovertint"></div>');
@@ -3943,10 +3956,13 @@ function parseServerMessage(message){
         case 'CIU':
             // Receiving an invite to a channel.
             // Store title
-            isPublic = obj.name.substr(0, 3) === 'ADH';
+            isPublic = obj.name.substr(0, 3) !== 'ADH';
             channels = isPublic ? App.publicChannels : App.privateChannels;
             if(typeof channels[obj.name] === 'undefined'){
                 channels[obj.name] = {};
+                if(!isPublic){
+                    channels[obj.name].locked = true;
+                }
             }
             channels[obj.name].name = obj.name;
             channels[obj.name].title = obj.title;            
@@ -3992,9 +4008,13 @@ function parseServerMessage(message){
             
             if(typeof channels[obj.channel] === 'undefined'){
                 channels[obj.channel] = {};
+                if(!isPublic){
+                    channels[obj.channel].locked = true;
+                    console.log("Channel entry for " + obj.channel + " created from COL. Locked set true.");
+                }
             }
             
-            channels[obj.channel].ops = obj.oplist;
+            channels[obj.channel].ops = obj.oplist;            
             break;
         case 'CON':
             // The number of connected users. Received after connecting and identifying.
@@ -4077,9 +4097,20 @@ function parseServerMessage(message){
             isPublic = obj.channel.substr(0, 3) !== 'ADH';
             channels = isPublic ? App.publicChannels : App.privateChannels;
 
+            // If the room is private
+            
+                // If the room is in our list of private channels, it must be open but that list might not be up to date..
+                
+                // We can set it as locked but then update it's status when we receive a message that the room has been opened or we bring down a new channel list and this room is in it.
+                
+
             // Do we have any info for this channel?
             if(typeof channels[obj.channel] === 'undefined'){
                 channels[obj.channel] = {};
+                if(!isPublic){
+                    channels[obj.channel].locked = true;
+                    console.log("Channel " + obj.channel + " created from ICH. Locked set to true.");
+                }
             }
             
             channels[obj.channel].mode = obj.mode;
@@ -4087,6 +4118,15 @@ function parseServerMessage(message){
             if(isPublic){
                 channels[obj.channel].title = obj.channel;
             }
+            
+            
+            /*
+            else if(obj.channel in App.privateChannels){
+                channels[obj.channel].locked = false;
+            }
+            else {
+                channels[obj.channel].locked = true;
+            }*/
 
             // Store user list. Wipe out any existing userlist, we're getting a new, whole one.
             channels[obj.channel].users = [];
@@ -4144,7 +4184,8 @@ function parseServerMessage(message){
             else if(!isPublic && typeof App.privateChannels[obj.channel] === 'undefined'){
                 App.privateChannels[obj.channel] = {
                     name: obj.channel,
-                    title: obj.title
+                    title: obj.title,
+                    locked: true
                 };
             }
             break;
@@ -4217,17 +4258,35 @@ function parseServerMessage(message){
             break;
         case 'ORS':
             // A list of open private rooms.
-
+            
+            // If we have an unlocked, private room in our list and it's not on this incoming list, don't list it.
+            
+            for(var key in App.privateChannels){
+                App.privateChannels[key].invalidated = true;
+            }
+            
              // Update our list of channels.
             for(i = 0; i < obj.channels.length; i++){
                 if(typeof App.privateChannels[obj.channels[i].name] === 'undefined'){
                     App.privateChannels[obj.channels[i].name] = {};
+                    
+                    console.log("Channel " + obj.channels[i].name + " created from ORS. Locked set to false.");
                 }
 
                 App.privateChannels[obj.channels[i].name].name = obj.channels[i].name;
                 App.privateChannels[obj.channels[i].name].title = obj.channels[i].title;
                 App.privateChannels[obj.channels[i].name].mode = obj.channels[i].mode;
                 App.privateChannels[obj.channels[i].name].characterCount = obj.channels[i].characters;
+                App.privateChannels[obj.channels[i].name].locked = false;
+                App.privateChannels[obj.channels[i].name].invalidated = false;
+                
+                // If this channel is open already.
+                if(App.state.openChannels.indexOf(obj.channels[i].name) !== -1){
+                    // Update button dom.
+                    var icon = App.privateChannels[obj.channels[i].name].buttonDom.find('.fa');
+                    icon.removeClass();
+                    icon.addClass('fa fa-unlock');
+                }                
             }
 
             // Update dom.
@@ -4265,7 +4324,19 @@ function parseServerMessage(message){
             // System message from the server.
             if(obj.message.indexOf("This channel is now [b]public.[/b]") !== -1){
                 var channelName = obj.channel.substr(0, 3).toUpperCase() + obj.channel.substr(3);
+                App.privateChannels[channelName].locked = false;
+                                
+                // Update button dom.
+                var icon = App.privateChannels[channelName].buttonDom.find('.fa');
+                icon.removeClass();
+                icon.addClass('fa fa-unlock');
+                
                 pushFeedItem('info', App.privateChannels[channelName].title + ' is now [b]public.[/b]', true, false);
+                
+                return;
+            }
+            else if(obj.message.indexOf('Your invitation has been sent.') !== -1){
+                pushFeedItem('info', 'Your invitation has been sent.', true, false);
                 return;
             }
             else if(obj.message.indexOf("has been removed from the moderator list for") === -1 && obj.message.indexOf("has been added to the moderator list for") === -1){
