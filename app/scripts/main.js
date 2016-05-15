@@ -546,6 +546,7 @@ function checkForReadyStatus(){
         $('.loginloadingcontent span').addClass('fa ' + rpslz[Math.floor(Math.random() * rpslz.length)]);
         $('.loginloadingcontent span').attr('title', 'SCISSORS cuts PAPER covers ROCK crushes LIZARD poisons SPOCK smashes SCISSORS decapitates LIZARD eats PAPER disproves SPOCK vaporizes ROCK crushes SCISSORS');
             
+        // Delay and goto main.    
         setTimeout(function(){
             // Remove login loading content
             $('.maincontainer').remove();
@@ -555,6 +556,9 @@ function checkForReadyStatus(){
             
             // Options
             loadOptionsCookie();
+            
+            // Refresh channel list
+            refreshChannels();  
         }, App.consts.logInTimeout);
     }    
     else {
