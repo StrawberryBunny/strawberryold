@@ -2399,8 +2399,6 @@ function postForFriendsList(){
     $.post('https://www.f-list.net/json/api/friend-list.php', 
 		'ticket=' + App.user.ticket + '&account=' + App.user.account,
 		function(data){			
-            console.log(JSON.stringify(data));
-            
             var friends = data.friends;
 			App.user.friendsList = {};
 			for(var i = 0; i < friends.length; i++){
@@ -3750,7 +3748,7 @@ function createDomToolPictures(){
 }
 
 function createDomToolPicturesEntry(url, sender, message){
-    var domMain = $('<div class="picturesentry"></div>');
+    var domMain = $('<div class="picturesentry" title="' + url + '"></div>');
    
     var domButtons = $('<div class="picturesentrybuttons"></div>');
     domMain.append(domButtons);
@@ -3761,46 +3759,59 @@ function createDomToolPicturesEntry(url, sender, message){
     var domBtnShare = $('<span class="faicon fa fa-share-alt"></span>');
     domButtonsWrapper.append(domBtnShare);
     domBtnShare.click(function(){
-        var str = '[url=' + $(this).parent().parent().parent().find('.img-responsive').attr('src') + ']';
-        var strEnd = '[/url]';
-        var textVal = App.dom.mainTextEntry.val();
-        var caretPos = App.dom.mainTextEntry.prop('selectionStart');
         
-        var selectionStart = App.dom.mainTextEntry.prop('selectionStart');
-        var selectionLength = App.dom.mainTextEntry.prop('selectionEnd') - selectionStart;
+        var textArea;
+        if(App.state.selectedChannel === ''){
+            textArea = App.dom.noChannelTextEntry.find('.textentrytextarea');
+        }
+        else {
+            var isPublic = App.state.selectedChannel !== 'ADH';
+            var channels = isPublic ? App.publicChannels : App.privateChannels;
+            textArea = channels[App.state.selectedChannel].textEntry.find('.textentrytextarea');
+        }     
+        
+        var str = '[url=' + $(this).closest('.picturesentry').attr('title') + ']';
+        var strEnd = '[/url]';
+        var textVal = textArea.val();
+        var caretPos = textArea.prop('selectionStart');
+        
+        var selectionStart = textArea.prop('selectionStart');
+        var selectionLength = textArea.prop('selectionEnd') - selectionStart;
         
         // If nothing is selected
         if(selectionLength === 0){
             // Insert at caret position
             var final = textVal.splice(caretPos, 0, str + strEnd);
-            App.dom.mainTextEntry.val(final);
+            textArea.val(final);
             
             // Focus the text area.
-            App.dom.mainTextEntry.focus();
+            textArea.focus();
             
             // Place the caret in the middle of our [url] tags.
-            App.dom.mainTextEntry.selectRange(caretPos + str.length);
+            textArea.selectRange(caretPos + str.length);
         }
         // else if a word/more is selected.
         else {
             // Retrieve the selected text. 
-            var selection = App.dom.mainTextEntry.val().substr(selectionStart, selectionLength);
+            var selection = textArea.val().substr(selectionStart, selectionLength);
             
             // Construct the string we're going to replce the selection with.
             var strToAdd = str + selection + strEnd;
             
             // Replace the selection.
-            var newVal = App.dom.mainTextEntry.val().splice(selectionStart, selectionLength, strToAdd);
+            var newVal = textArea.val().splice(selectionStart, selectionLength, strToAdd);
             
             // Set
-            App.dom.mainTextEntry.val(newVal);
+            textArea.val(newVal);
         }
     });
     
     var domBtnOpen = $('<span class="faicon fa fa-external-link"></span>');
     domButtonsWrapper.append(domBtnOpen);
     domBtnOpen.click(function(){
-        window.open($(this).parent().parent().parent().find('.img-responsive').attr('src'), '_blank');
+        // get url from title.
+        var url = $(this).closest('.picturesentry').attr('title');
+        window.open(url, '_blank');
     });   
     
     var domBtnClose = $('<span class="faicon fa fa-times"></span>');
