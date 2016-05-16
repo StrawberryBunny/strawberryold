@@ -3319,8 +3319,10 @@ function createDomToolViewer(){
                 $(this).addClass('fa-spin');
             }
             else {
-                $('.toolviewerscroller').animate({
-                    scrollTop: $('.toolviewerarea').find('.memocontainer').offset().top
+                var scr = $('.toolviewerscroller');
+                scr.stop(true);
+                scr.animate({
+                    scrollTop: scr[0].scrollHeight
                 }, 2000);
             }
         }
