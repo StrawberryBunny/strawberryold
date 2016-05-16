@@ -1192,18 +1192,22 @@ function characterJoinedChannel(character, channel){
     channels[channel].users.push(character);
     channels[channel].users.sort();
     
-    // (Re)create userlist dom.
-    channels[channel].userlistDom.empty();
-    for(var i = 0; i < channels[channel].users.length; i++){
-        var charName = channels[channel].users[i];
-        var dom = createDomUserEntry(charName, App.characters[charName].gender, App.characters[charName].status, App.characters[charName].statusmsg, false, channel);
-        channels[channel].userlistDom.append(dom);
+    // Figure out which userlistentry (that's already in the dom) comes before the one we want to add.
+    var newIndex = channels[channel].users.indexOf(character);
+    var prevIndex = newIndex - 1;
+    if(prevIndex < 0){
+        prevIndex = 0;
     }
     
+    // Create dom.
+    var dom = createDomUserEntry(character, App.characters[character].gender, App.characters[character].status, App.characters[character].statusmsg, false, channel);
+    
+    // Get the userentry at the index we found and append this new user entry after it.
+    channels[channel].userlistDom.find('.userentry').eq(prevIndex).after(dom);
+        
     // Update this channel's entry in the channel list. (The room is private and not opened it won't be in the channel list.)
     if(typeof channels[channel].listEntry !== 'undefined'){
-        var count = parseInt(channels[channel].listEntry.find('#charcount').text());
-        channels[channel].listEntry.find('#charcount').text(count + 1);
+        channels[channel].listEntry.find('#charcount').text(channels[channel].users.length);
     }
 }
 
@@ -1219,12 +1223,19 @@ function characterLeftChannel(character, channel){
         return;
     }
     
-    // Remove from list dom.
-    channels[channel].userlistDom.children('.userentry').each(function(){
-        if($(this).attr('title') === character){
-            $(this).remove();
-        }
-    });
+    // Remove the userlist entry.
+    var userEntryDom = channels[channel].userlistDom.find('.userentry[title=' + character + ']');
+    if(typeof userEntryDom === 'undefined' || userEntryDom.length === 0){
+        pushFeedItem(App.consts.feed.types.error, character + ' left ' + channel + ' but we could not find their entry in the userlist.');
+        return;
+    }
+    else if(userEntryDom.length > 1){
+        pushFeedItem(App.consts.feed.types.error, character + ' left ' + channel + ' but we matched more than one entry to them in the userlist.');
+        return;
+    }
+    else {
+        userEntryDom.remove();
+    }    
     
     // Update this channel's entry in the channel list.
     if(typeof channels[channel].listEntry !== 'undefined'){
@@ -4068,14 +4079,13 @@ function createDomPMScroller(){
  */
 
 function sendMessageToServer(message){
-    console.log("TO SERVER: " + message);
     App.connection.send(message);
 }
 
 function openWebSocket(account, ticket, characterName){
     // Create websocket
-    //App.connection = new WebSocket('ws://chat.f-list.net:8722');
-    App.connection = new WebSocket('ws://chat.f-list.net:9722');
+    App.connection = new WebSocket('ws://chat.f-list.net:8722'); // Test Server
+    //App.connection = new WebSocket('ws://chat.f-list.net:9722'); // Proper Server
 
     // Add listeners
     App.connection.onopen = function(){
@@ -4461,7 +4471,7 @@ function parseServerMessage(message){
 
             // Was this character our friend or bookmark? (If we're logged in yet..)
             if(typeof App.user.loggedInAs !== 'undefined' && typeof App.user.friendsList !== 'undefined'){
-                if(obj.identity !== App.user.loggedInA && typeof App.user.friendsList[App.user.loggedInAs] !== 'undefined'){
+                if(obj.identity !== App.user.loggedInAs && typeof App.user.friendsList[App.user.loggedInAs] !== 'undefined' && typeof App.user.bookmarks !== 'undefined'){
                     if(App.user.friendsList[App.user.loggedInAs].indexOf(obj.identity) !== -1){
                         pushFeedItem(App.consts.feed.types.alert, 'Your friend [icon]' + obj.identity + '[/icon] has come online.');
                     }
