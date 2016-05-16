@@ -1133,6 +1133,18 @@ function closeChannel(name){
     
     // What next?
     selectPreviousChannelOrPM(index);
+    
+    // Ensure the open channel list is scrolled correctly.
+    var domChannels = $('.channels');   
+    var domChanList = $('#channellist');
+    
+     // Is the content now offcscreen?
+     if(domChanList.height() < domChannels.height()){
+         domChanList.css('margin-top', 0);
+     }
+     else if(domChanList.height() < domChannels.height() - domChanList.css('margin-top').replace(/[^-\d\.]/g, '')){
+         domChanList.css('margin-top', -(domChanList.height() - domChannels.height()));
+     }
 }
 
 function receiveMessage(channel, character, message, buzz){
