@@ -77,6 +77,7 @@ var App = {
             filterAlerts: false,
             filterMentions: false,
             filterErrors: false,
+            uniqueID: 0
         },
         viewer: {
             target: ''
@@ -1428,7 +1429,7 @@ function selectPM(character){
         var feedEntry = App.tools['feed'].queue[i];
         if(feedEntry[0] === App.consts.feed.types.pm){
             // Is this pm from the same person as this PM channel?
-            if(feedEntry[2] === character){
+            if(feedEntry[3] === character){
                 // Remove this feed entry.
                 App.tools['feed'].queue.splice(i, 1);
                 i--;
@@ -1655,8 +1656,12 @@ function pushFeedItem(type, message, sender){
         text: message
     });
 
+    // Get a unique ID for this feed item.
+    var id = App.tools['feed'].uniqueID;
+    App.tools['feed'].uniqueID++;
+
     // Push message into queue
-    var queueObj = [type, bb.html, sender];
+    var queueObj = [type, id, bb.html, sender];
     App.tools['feed'].queue.push(queueObj);
 
     // Should we count this type of message?
@@ -1669,7 +1674,7 @@ function pushFeedItem(type, message, sender){
     // If the feed panel isn't open..
     // Show this message in the chat?
     if(App.state.currentTool !== 'feed' && App.state.selectedChannel !== '' && type !== App.consts.feed.types.pm){
-        var domMsg = createDomToolFeedMessage(queueObj[0], queueObj[1], queueObj[2]);
+        var domMsg = createDomToolFeedMessage(queueObj[0], queueObj[1], queueObj[2], queueObj[3]);
         var messageDom;
         if(App.state.selectedChannel === 'pm'){
             messageDom = App.characters[App.state.selectedPM].pms.messageDom;
@@ -1685,8 +1690,6 @@ function pushFeedItem(type, message, sender){
     
     // Update queue.
     updateFeedQueueCounter();
-    
-    
 }
 
 function countQueuedFeedItems(){
@@ -1751,7 +1754,7 @@ function displayNextFeedMessage(iterate){
 
     // Create dom
     var feedEntry = App.tools['feed'].queue.shift();
-    var domMsg = createDomToolFeedMessage(feedEntry[0], feedEntry[1], feedEntry[2]);
+    var domMsg = createDomToolFeedMessage(feedEntry[0], feedEntry[1], feedEntry[2], feedEntry[3]);
 
     // Append dom to feed content.
     App.tools['feed'].messagePush.append(domMsg);
@@ -1794,8 +1797,8 @@ function displayNextFeedMessage(iterate){
     
     // If this was a PM, stop the PM channel button flashing.
     if(type === App.consts.feed.types.pm){
-        App.characters[feedEntry[2]].pms.buttonDom.stop(true);
-        App.characters[feedEntry[2]].pms.buttonDom.css('background-color', '');
+        App.characters[feedEntry[3]].pms.buttonDom.stop(true);
+        App.characters[feedEntry[3]].pms.buttonDom.css('background-color', '');
     }
     
     // Recount
@@ -2388,6 +2391,8 @@ function postForFriendsList(){
     $.post('https://www.f-list.net/json/api/friend-list.php', 
 		'ticket=' + App.user.ticket + '&account=' + App.user.account,
 		function(data){			
+            console.log(JSON.stringify(data));
+            
             var friends = data.friends;
 			App.user.friendsList = {};
 			for(var i = 0; i < friends.length; i++){
@@ -3202,10 +3207,9 @@ function createDomToolFeed(){
     App.tools['feed'].messagePush = domMessages;
 }
 
-function createDomToolFeedMessage(type, message, sender){    
-    
+function createDomToolFeedMessage(type, id, message, sender){    
     // Create a message dom for this message.
-    var domMsg = $('<div class="feedmessage"></div>');
+    var domMsg = $('<div class="feedmessage" title="' + id +'"></div>');
     
     var domContainer = $('<div class="feedcontainer"></div>');
     domMsg.append(domContainer);   
@@ -3241,6 +3245,9 @@ function createDomToolFeedMessage(type, message, sender){
     domBtnClose.click(function(){
         $(this).closest('.feedmessage').slideUp('slow', function(){
             $(this).remove();
+            
+            // Remove this feed item from the feed queue, feed push dom and channels.
+            removeAllFeedItemsWithID(parseInt($(this).closest('.feedmessage').attr('title')));
         });
     });    
        
@@ -3354,6 +3361,34 @@ function createDomToolFeedMessage(type, message, sender){
     
     // return
     return domMsg;
+}
+
+function removeAllFeedItemsWithID(id){
+    // Remove from the queue.
+    for(var i = 0; i < App.tools['feed'].queue.length; i++){
+        var feedEntry = App.tools['feed'].queue[i];
+        if(feedEntry[1] === id){
+            App.tools['feed'].queue.splice(i, 1);
+            i--;
+        }
+    }
+    
+    // Remove from feed dom.
+    $('.toolfeedmessages').children('.feedmessage[title="' + id + '"]').slideUp(function(){
+        $(this).remove();
+    });
+    
+    // Remove from channels.
+    for(var i = 0; i < App.state.openChannels.length; i++){
+        var isPublic = App.state.openChannels[i].substr(0, 3) !== 'ADH';
+        var channels = isPublic ? App.publicChannels : App.privateChannels;
+        channels[App.state.openChannels[i]].messageDom.children('.feedmessage[title="' + id + '"]').slideUp(function(){
+            $(this).remove();
+        });
+    }
+    
+    // Reset the feed counter
+    updateFeedQueueCounter();
 }
 
 function createFeedPMGotoPMButtonClickCallback(sender, dom){
