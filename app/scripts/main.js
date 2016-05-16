@@ -3842,7 +3842,7 @@ function createDomImageOrVideo(url){
         dom =$('<img class="img-responsive" src="' + url + '"/>');
     }
     else if(isWebmUrl(url)){
-        dom = $('<video class="gfyVid" autoplay="" loop="" style="width: 100%; height: auto;"><source src="' + url + '" type="video/webm" class="webmsource"></video>');
+        dom = $('<video controls muted class="gfyVid" autoplay="" loop="" style="width: 100%; height: auto;"><source src="' + url + '" type="video/webm" class="webmsource"></video>');
     }    
     return dom;
 }
