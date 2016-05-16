@@ -1287,7 +1287,7 @@ function checkForDomInterupts(dom, isPM, chanchar){
         // If this url link is to a picture.
         var url = $(this).attr('title');
         var msg = $(this).text();
-        if(isImageUrl(url)){
+        if(isImageViewerUrl(url)){
             // Push this item into the picture
             pushImageToPictures(url, character, msg); 
         }
@@ -2336,8 +2336,16 @@ function lengthInUtf8Bytes(str){
     return str.length + (m ? m.length : 0);
 }
 
-function isImageUrl(url) {
+function isImageViewerUrl(url){
+    return(url.match(/\.(jpeg|jpg|gif|png|webm)$/) != null);
+}
+
+function isImageUrl(url){
     return(url.match(/\.(jpeg|jpg|gif|png)$/) != null);
+}
+
+function isWebmUrl(url){
+    return(url.match(/\.(webm)$/) != null);
 }
 
 $.fn.selectRange = function(start, end) {
@@ -3720,7 +3728,7 @@ function createDomToolPictures(){
         }
         
         // Does the inputVal end with an image extension?
-        if(!isImageUrl(inputVal)){
+        if(!isImageViewerUrl(inputVal)){
             return;
         }
         
@@ -3811,10 +3819,21 @@ function createDomToolPicturesEntry(url, sender, message){
         domMain.append(domMessage);
     }
         
-    var domImage = $('<img class="img-responsive" src="' + url + '"/>');
+    var domImage = createDomImageOrVideo(url);
     domMain.append(domImage);
     
     return domMain;
+}
+
+function createDomImageOrVideo(url){
+    var dom;
+    if(isImageUrl(url)){
+        dom =$('<img class="img-responsive" src="' + url + '"/>');
+    }
+    else if(isWebmUrl(url)){
+        dom = $('<video class="gfyVid" autoplay="" loop="" style="width: 100%; height: auto;"><source src="' + url + '" type="video/webm" class="webmsource"></video>');
+    }    
+    return dom;
 }
 
 function createDomToolSettings(){
@@ -4830,7 +4849,7 @@ $(document).ready(function(){
     $(document).on('click', '.urllink', function(e){
         var url = $(this).attr('title');
         var msg = $(this).text();
-        if(isImageUrl(url)){
+        if(isImageViewerUrl(url)){
             // Show in dreamer.
             // Search for an owner of this url.
             var owner = App.user.loggedInAs;
