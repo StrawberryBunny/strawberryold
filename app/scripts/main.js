@@ -53,7 +53,8 @@ var App = {
             serverInfoRetrieved: false,
             friendsListRetrieved: false,
             bookmarksRetrieved: false            
-        }
+        },
+        lastMessageSentAt: 99999999
     },
     tools: { // A place to store things for each tool: (all tools have a button and content entry for their respective dom elements.)
        status: {
@@ -654,6 +655,11 @@ function sendChatMessageToActiveWindow(message, skipCommandCheck){
         return false;
     }
     
+    // Check for flood
+    if(checkForMsgFlood()){
+        return;
+    }
+    
     return sendMessage(message, App.state.selectedChannel === 'pm', App.state.selectedChannel === 'pm' ? App.state.selectedPM : App.state.selectedChannel);
 }
 
@@ -703,6 +709,10 @@ function sendMessage(message, isPM, chanchar){
         receiveMessage(chanchar, App.user.loggedInAs, message, false);
     }
     
+    // Set last message time.
+    App.state.lastMessageSentAt = new Date().getTime();
+    
+    // Return success.
     return true;
 }
 
@@ -911,6 +921,15 @@ function updateTitle(){
     }
     
     document.title = title;
+}
+
+function checkForMsgFlood(){
+    if(new Date().getTime() - App.state.lastMessageSentAt > App.serverVars['msg_flood'] * 1000){
+        return false;
+    }
+    
+    pushFeedItem(App.consts.feed.types.error, 'You must wait at least ' + App.serverVars['msg_flood'] + ' seconds between messages.');
+    return true;    
 }
 
 /**
@@ -3272,28 +3291,33 @@ function createDomToolFeedMessage(type, message, sender){
             var domTASend = $('<button class="btn btn-default">Send</button>');
             domReply.append(domTASend);
             domTASend.click(function(){
+                // Can we send a message yet?
+                if(checkForMsgFlood()){
+                    return;
+                }
+                
                 var textArea = $(this).parent().find('.replytextarea');
                 var recipient = $(this).parent().parent().find('#data').attr('title');
-                sendMessage(textArea.val(), true, recipient);
-                
-                // Disable the send button.
-                $(this).addClass('disabled');
-                
-                // Remove the text area and replace.
-                var sentMessage = $('<div class="feedsentmessage"></div>');
-                sentMessage.append('> ' + textArea.val());
-                textArea.parent().append(sentMessage);
-                sentMessage.hide();
-                sentMessage.fadeIn();
-                
-                textArea.fadeOut(function(){
-                    $(this).remove();
-                });
-                
-                $(this).fadeOut(function(){
-                    $(this).remove();
-                });
-                
+                var result = sendMessage(textArea.val(), true, recipient);
+                if(result){
+                    // Disable the send button.
+                    $(this).addClass('disabled');
+                    
+                    // Remove the text area and replace.
+                    var sentMessage = $('<div class="feedsentmessage"></div>');
+                    sentMessage.append('> ' + textArea.val());
+                    textArea.parent().append(sentMessage);
+                    sentMessage.hide();
+                    sentMessage.fadeIn();
+                    
+                    textArea.fadeOut(function(){
+                        $(this).remove();
+                    });
+                    
+                    $(this).fadeOut(function(){
+                        $(this).remove();
+                    });
+                }
             });
             
             $(this).closest('.fpm').append(domReply);
