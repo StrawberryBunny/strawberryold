@@ -2936,22 +2936,25 @@ function createDomToolStatus(){
     var btnUpdate = $('<button id="btnstatusupdate" type="submit" class="btn btn-default">Update</button>');
     domCont.append(btnUpdate);
     btnUpdate.click(function(){
-        // Send Message
-        sendMessageToServer('STA { "status": "' + App.tools['status'].dropdown.val() + '", "statusmsg": "' + escapeJson(App.tools['status'].textarea.val()) + '" }');
-
-        // Show progress spinner.
-        App.tools['status'].progressIcon.removeClass();
-        App.tools['status'].progressIcon.addClass('fa fa-spinner fa-spin');
-        App.tools['status'].progressIcon.show();
-
-        // Disable Update button
-        App.tools['status'].updatebutton.addClass('disabled');
-
-        // Timeouts
-        setTimeout(function(){
-            App.tools['status'].progressIcon.fadeOut();
-            App.tools['status'].updatebutton.removeClass('disabled');           
-        }, 5000);
+        // Is the button disabled?
+        if(!$(this).hasClass('disabled')){
+            // Send Message
+            sendMessageToServer('STA { "status": "' + App.tools['status'].dropdown.val() + '", "statusmsg": "' + escapeJson(App.tools['status'].textarea.val()) + '" }');
+            
+            // Show progress spinner.
+            App.tools['status'].progressIcon.removeClass();
+            App.tools['status'].progressIcon.addClass('fa fa-spinner fa-spin');
+            App.tools['status'].progressIcon.show();
+            
+            // Disable Update button
+            App.tools['status'].updatebutton.addClass('disabled');
+            
+            // Timeouts
+            setTimeout(function(){
+                App.tools['status'].progressIcon.fadeOut();
+                App.tools['status'].updatebutton.removeClass('disabled');           
+            }, 5000);
+        }
     });
     
     botContent.append(domCont);
