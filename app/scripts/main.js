@@ -3936,7 +3936,7 @@ function createDomChannelScroller(){
 function createDomChannelTextEntry(){
     var domContainer = $('<div class="textentrycontainer"></div>');
     
-    var domTA = $('<textarea class="textentrytextarea"></textarea>');
+    var domTA = $('<textarea class="textentrytextarea" maxlength="' + App.serverVars['chat_max'] + '"></textarea>');
     domContainer.append(domTA);
     
     var domTextEntryButton = $('<button type="submit" class="textentrybutton btn btn-default" autocomplete="off">Send</button>');
@@ -3972,7 +3972,7 @@ function createDomPMButton(character){
 function createDomPMTextEntry(){
     var domContainer = $('<div class="textentrycontainer"></div>');
     
-    var domTA = $('<textarea class="textentrytextarea"></textarea>');
+    var domTA = $('<textarea class="textentrytextarea" maxlength="' + App.serverVars['priv_max'] + '"></textarea>');
     domContainer.append(domTA);
     
     var domTextEntryButton = $('<button type="submit" class="textentrybutton btn btn-default" autocomplete="off">Send</button>');
