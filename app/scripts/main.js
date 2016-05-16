@@ -4001,7 +4001,6 @@ function createDomUserEntry(name, gender, status, statusmsg, slashMe, channel){
         }
         
         // Gender colour.
-        console.log("Name: " + name + ", gender: " + App.characters[name].gender);
         genderColour = App.options.genderColours[App.characters[name].gender.toLowerCase()][0];
     }
 
