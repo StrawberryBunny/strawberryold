@@ -653,13 +653,15 @@ function sendChatMessageToActiveWindow(message, skipCommandCheck){
                 }
             }
         }        
+        
+        // TODO unrecognized command?
          
         return false;
     }
     
     // Check for flood
     if(checkForMsgFlood()){
-        return;
+        return false;
     }
     
     return sendMessage(message, App.state.selectedChannel === 'pm', App.state.selectedChannel === 'pm' ? App.state.selectedPM : App.state.selectedChannel);
