@@ -85,7 +85,7 @@ var App = {
         }
     },
     consts: {
-        version: '0.3',
+        version: '0.4',
         logInTimeout: 2500,
         icons: {
             loading: [
@@ -181,7 +181,8 @@ var App = {
 	},
     changelog: [
         ['0.2', ['First changelog! Woo!', 'Nothing\'s really changed yet, though.', 'Moved from a simple notepad++ set-up to using Gulp to build my files and Bower for dependency management.']],
-        ['0.3', ['Channel buttons now include a label.', 'Locked and unlocked rooms now display.', 'Implemented /makeroom, /openroom, /code, /invite and /setdescription commands for private channels.', 'Various sweeping fixus and tweaks.']]
+        ['0.3', ['Channel buttons now include a label.', 'Locked and unlocked rooms now display.', 'Implemented /makeroom, /openroom, /code, /invite and /setdescription commands for private channels.', 'Various sweeping fixus and tweaks.']],
+        ['0.4', ['Fix for scrollbars at the bottom jumping up a little when the tool panel is opened.', 'Fix for users entering/leaving rooms messing up the userlist.', 'Userlists now sort better.', 'Fix for channel labels overflowing buttons.', 'Fixed channel list not updating correctly when users join a channel', 'Fix for channel buttons not stopping flashing when selected.', 'User\'s own messages now highlighted.', 'Feed messages now appear in the active channel.', 'Fix for viewer scrolling to memo strangeness.', 'Site title now updates to show logged in character and number of unread messages.', 'Fix for Male-Herm and Cunt-boy. We forgot about the dashes.', 'Fix for open channel buttons not being visiable after closing some when the list is scrolled down.']]
     ],
     commands: [
         {
