@@ -888,6 +888,24 @@ function updateAllUserEntries(){
     }
 }
 
+function updateTitle(){
+    var count = countQueuedFeedItems();
+    var title = '';
+    if(count > 0){
+        title += '[' + count + '] ';
+    }
+    
+    if(App.user.loggedInAs !== '' && typeof App.user.loggedInAs !== 'undefined'){
+        title += App.user.loggedInAs;
+    }
+    
+    if(title.length < 8){
+        title += ' Strawberry';
+    }
+    
+    document.title = title;
+}
+
 /**
  * Channels ========================================================================================================================
  */
@@ -1618,6 +1636,8 @@ function pushFeedItem(type, message, sender){
     
     // Update queue.
     updateFeedQueueCounter();
+    
+    
 }
 
 function countQueuedFeedItems(){
@@ -1643,8 +1663,11 @@ function updateFeedQueueCounter(){
         else {
             App.tools['feed'].counter.image.fadeIn();
             App.tools['feed'].counter.text.fadeIn();
-        }  
+        }
     }
+    
+    // Update title.
+    updateTitle();
 }
 
 function countFeedItemType(type){
