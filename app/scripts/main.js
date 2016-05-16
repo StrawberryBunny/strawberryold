@@ -613,12 +613,15 @@ function loadOptionsCookie(){
     
     // Start-up channels.
     if(typeof ckOptions.startUpChannels !== 'undefined'){
+        //console.log("Start-up channels: " + ckOptions.startUpChannels);
         var str = '';
         for(var j = 0; j < ckOptions.startUpChannels.length; j++){
-            joinChannel(ckOptions.startUpChannels[j]);
-            str += ckOptions.startUpChannels[j];
-            if(j != ckOptions.startUpChannels.length - 1){
-                str += ',';
+            if(ckOptions.startUpChannels[j].length > 0){
+                joinChannel(ckOptions.startUpChannels[j]);
+                str += ckOptions.startUpChannels[j];
+                if(j != ckOptions.startUpChannels.length - 1){
+                    str += ',';
+                }
             }
         }
         App.tools['settings'].startUpChannelsInput.val(str);
@@ -855,6 +858,9 @@ function selectPreviousChannelOrPM(index){
         else {
             selectChannel(title);
         }
+        
+        // Ensure the open channel list is not scrolled odly
+        
     }
 }
 
@@ -2187,6 +2193,16 @@ function sortUserList(channelName){
 			else return 0;
 		}		
     });
+}
+
+function fixGender(genderFromServer){
+    if(genderFromServer === 'Cunt-boy'){
+        genderFromServer = 'Cuntboy';
+    }
+    else if(genderFromServer === 'Male-Herm'){
+        genderFromServer = 'Maleherm';
+    }
+    return genderFromServer;
 }
 
 /**
@@ -3985,6 +4001,7 @@ function createDomUserEntry(name, gender, status, statusmsg, slashMe, channel){
         }
         
         // Gender colour.
+        console.log("Name: " + name + ", gender: " + App.characters[name].gender);
         genderColour = App.options.genderColours[App.characters[name].gender.toLowerCase()][0];
     }
 
@@ -4052,12 +4069,14 @@ function createDomPMScroller(){
  */
 
 function sendMessageToServer(message){
+    console.log("TO SERVER: " + message);
     App.connection.send(message);
 }
 
 function openWebSocket(account, ticket, characterName){
     // Create websocket
-    App.connection = new WebSocket('ws://chat.f-list.net:8722');
+    //App.connection = new WebSocket('ws://chat.f-list.net:8722');
+    App.connection = new WebSocket('ws://chat.f-list.net:9722');
 
     // Add listeners
     App.connection.onopen = function(){
@@ -4264,6 +4283,7 @@ function parseServerMessage(message){
                     servErrorIdentification();
                     break;
                 case 26:
+                    console.log(message);
                     throwError('Could not locate the requested channel.');
                     break;
                 case 28:
@@ -4406,7 +4426,7 @@ function parseServerMessage(message){
             // Receives an array of all the online characters and their gender, status and status msg. (often sent in batches. Use CON to know when we have them all)
             for(i = 0; i < obj.characters.length; i++){
                 App.characters[obj.characters[i][0]] = {
-                    gender: obj.characters[i][1],
+                    gender: fixGender(obj.characters[i][1]),
                     status: stylizeStatus(obj.characters[i][2]),
                     statusmsg: obj.characters[i][3],
                     pms: {}
@@ -4414,9 +4434,8 @@ function parseServerMessage(message){
                 App.state.logInReadyInfo.listedCharacters++;
             }
 
-            pushFeedItem(App.consts.feed.types.info, 'Received character payload of ' + obj.characters.length + ' character' + (obj.characters.length > 1 ? 's' : '') + '.');
-
             // If the amount of characters now matches or is greater than con, we've received the full user list.
+            //console.log("Listed characters: " + App.state.logInReadyInfo.listedCharacters + ", Count: " + App.state.logInReadyInfo.initialCharacterCount);
             if(App.state.logInReadyInfo.listedCharacters >= App.state.logInReadyInfo.initialCharacterCount){
                 App.state.logInReadyInfo.listComplete = true;
                 checkForReadyStatus();
@@ -4434,19 +4453,22 @@ function parseServerMessage(message){
             if(App.characters[obj.identity] === null || typeof App.characters[obj.identity] === 'undefined'){
                 App.characters[obj.identity] = {};
             }
-            App.characters[obj.identity].gender = obj.gender;
+            App.characters[obj.identity].gender = fixGender(obj.gender);
+            
             App.characters[obj.identity].status = stylizeStatus(obj.status);
             if(typeof App.characters[obj.identity].pms === 'undefined'){ 
                 App.characters[obj.identity].pms = {};
             }
 
-            // Was this character our friend or bookmark?
-            if(obj.identity !== App.user.loggedInAs){
-                if(App.user.friendsList[App.user.loggedInAs].indexOf(obj.identity) !== -1){
-                    pushFeedItem(App.consts.feed.types.alert, 'Your friend [icon]' + obj.identity + '[/icon] has come online.');
-                }
-                else if(App.user.bookmarks.indexOf(obj.identity) !== -1){
-                    pushFeedItem(App.consts.feed.types.alert, 'Your bookmark [icon]' + obj.identity + '[/icon] has come online.');
+            // Was this character our friend or bookmark? (If we're logged in yet..)
+            if(typeof App.user.loggedInAs !== 'undefined' && typeof App.user.friendsList !== 'undefined'){
+                if(obj.identity !== App.user.loggedInA && typeof App.user.friendsList[App.user.loggedInAs] !== 'undefined'){
+                    if(App.user.friendsList[App.user.loggedInAs].indexOf(obj.identity) !== -1){
+                        pushFeedItem(App.consts.feed.types.alert, 'Your friend [icon]' + obj.identity + '[/icon] has come online.');
+                    }
+                    else if(App.user.bookmarks.indexOf(obj.identity) !== -1){
+                        pushFeedItem(App.consts.feed.types.alert, 'Your bookmark [icon]' + obj.identity + '[/icon] has come online.');
+                    }
                 }
             }
             
