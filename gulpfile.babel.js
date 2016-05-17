@@ -93,7 +93,13 @@ gulp.task('serve', ['styles', 'scripts', 'fonts'], () => {
       routes: {
         '/bower_components': 'bower_components'
       }
-    }    
+    },
+    /* Uncommenting this disables browsersync to allow for cross-browser testing.
+    snippetOptions: {
+      rule: {
+        match: /qqqqqqqqq/
+      }
+    }*/
   });
 
   gulp.watch([
