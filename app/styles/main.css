@@ -1041,6 +1041,34 @@ a:active {
     margin-right: 3px;
 }
 
+.imagelink {
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.imagelink:hover {
+    color: #ea4933;
+    text-decoration: none;
+}
+
+.imagelink .fa-image {
+    margin-right: 3px;
+}
+
+.videolink {
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.videolink:hover {
+    color: #ea4933;
+    text-decoration: none;
+}
+
+.videolink .fa-film {
+    margin-right: 3px;
+}
+
 input {
     color: #222222;
 }

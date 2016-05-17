@@ -393,7 +393,7 @@ var XBBCODE = (function() {
                 return '</sup>';
             }
         },
-
+        /*
         "table": {
             openTag: function(params,content) {
                 return '<table class="xbbcode-table">';
@@ -478,6 +478,7 @@ var XBBCODE = (function() {
             },
             restrictChildrenTo: ["*", "li"]
         },
+        */
         "url": {
 			openTag: function(params,content) {
 				var url;
@@ -497,32 +498,20 @@ var XBBCODE = (function() {
                 }
 				
 				// Is this a youtube url?
-				var domain = extractDomain(url);
-				if(domain == 'www.youtube.com' || domain == 'youtu.be'){
-					var videoID = youtube_parser(url);
-					return '<div class="youtubethumbplacer" title="' + videoID + '|' + content + '"></div>';
-				}
-				else {
-					//return '<span class="fa fa-chain" style="margin-right: 3px"></span><a href="' + url + '" target="_blank"> ' + content + '</a>' ; // EDIT arget="_blank"
-                    // FIX for imgur's gifv links.
-                    if(url.substr(url.length - 4) === 'gifv'){
-                        url = url.substr(0, url.length - 1);
-                    }
-                    
-					return '<span class="urllink" title="' + url + '"><span class="fa ' + (isImageUrl(url) ? 'fa-image' : (isWebmUrl(url) ? 'fa-film' : 'fa-link')) + '"></span>' + content + '</span>';
-				}               
+				//return '<span class="urllink" title="' + url + '"><span class="fa ' + (isImageUrl(url) ? 'fa-image' : (isWebmUrl(url) ? 'fa-film' : 'fa-link')) + '"></span>' + content + '</span>';
+                return '<span class="urlplaceholder" title="' + url + '">';
             },
             closeTag: function(params,content) {
-				 return '';
+				 return '</span>';
             },
-			displayContent: false
+			displayContent: true
         },
         /*
             The [*] tag is special since the user does not define a closing [/*] tag when writing their bbcode.
             Instead this module parses the code and adds the closing [/*] tag in for them. None of the tags you
             add will act like this and this tag is an exception to the others.
         */
-        "*": {
+        /*"*": {
             openTag: function(params,content) {
                 return "<li>";
             },
@@ -530,7 +519,7 @@ var XBBCODE = (function() {
                 return "</li>";
             },
             restrictParentsTo: ["list","ul","ol"]
-        },
+        },*/
 		"icon": {
 			openTag: function(params,content) {
                 var full = '<img class="iconlink avatar img-rounded" title="' + content + '"src="https://static.f-list.net/images/avatar/' + escapeHtml(content).toLowerCase() + '.png" width="100px" height="100px" />';
@@ -577,15 +566,6 @@ var XBBCODE = (function() {
             },
             displayContent: true
         },
-		"ee": {
-			openTag: function(params, content){
-				return '<img class="img-rounded" src="easteregg.gif"/>';
-			},
-			closeTag: function(params, content){
-				return '';
-			},
-			displayContent: false
-		},
 		"collapse": {
 			openTag: function(params, content){
 				return '<p><b>' + params.substr(1) + '</b></p><p>'

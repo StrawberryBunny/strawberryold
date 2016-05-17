@@ -1,7 +1,5 @@
 'use strict';
 
-/* global XBBCODE */
-
 /**
  * App Data ====================================================================================================================
  */
@@ -530,6 +528,8 @@ var App = {
         }
     ]
 };
+
+var TLDs = ["ac", "ad", "ae", "aero", "af", "ag", "ai", "al", "am", "an", "ao", "aq", "ar", "arpa", "as", "asia", "at", "au", "aw", "ax", "az", "ba", "bb", "bd", "be", "bf", "bg", "bh", "bi", "biz", "bj", "bm", "bn", "bo", "br", "bs", "bt", "bv", "bw", "by", "bz", "ca", "cat", "cc", "cd", "cf", "cg", "ch", "ci", "ck", "cl", "cm", "cn", "co", "com", "coop", "cr", "cu", "cv", "cx", "cy", "cz", "de", "dj", "dk", "dm", "do", "dz", "ec", "edu", "ee", "eg", "er", "es", "et", "eu", "fi", "fj", "fk", "fm", "fo", "fr", "ga", "gb", "gd", "ge", "gf", "gg", "gh", "gi", "gl", "gm", "gn", "gov", "gp", "gq", "gr", "gs", "gt", "gu", "gw", "gy", "hk", "hm", "hn", "hr", "ht", "hu", "id", "ie", "il", "im", "in", "info", "int", "io", "iq", "ir", "is", "it", "je", "jm", "jo", "jobs", "jp", "ke", "kg", "kh", "ki", "km", "kn", "kp", "kr", "kw", "ky", "kz", "la", "lb", "lc", "li", "lk", "lr", "ls", "lt", "lu", "lv", "ly", "ma", "mc", "md", "me", "mg", "mh", "mil", "mk", "ml", "mm", "mn", "mo", "mobi", "mp", "mq", "mr", "ms", "mt", "mu", "museum", "mv", "mw", "mx", "my", "mz", "na", "name", "nc", "ne", "net", "nf", "ng", "ni", "nl", "no", "np", "nr", "nu", "nz", "om", "org", "pa", "pe", "pf", "pg", "ph", "pk", "pl", "pm", "pn", "pr", "pro", "ps", "pt", "pw", "py", "qa", "re", "ro", "rs", "ru", "rw", "sa", "sb", "sc", "sd", "se", "sg", "sh", "si", "sj", "sk", "sl", "sm", "sn", "so", "sr", "st", "su", "sv", "sy", "sz", "tc", "td", "tel", "tf", "tg", "th", "tj", "tk", "tl", "tm", "tn", "to", "tp", "tr", "travel", "tt", "tv", "tw", "tz", "ua", "ug", "uk", "us", "uy", "uz", "va", "vc", "ve", "vg", "vi", "vn", "vu", "wf", "ws", "xn--0zwm56d", "xn--11b5bs3a9aj6g", "xn--3e0b707e", "xn--45brj9c", "xn--80akhbyknj4f", "xn--90a3ac", "xn--9t4b11yi5a", "xn--clchc0ea0b2g2a9gcd", "xn--deba0ad", "xn--fiqs8s", "xn--fiqz9s", "xn--fpcrj9c3d", "xn--fzc2c9e2c", "xn--g6w251d", "xn--gecrj9c", "xn--h2brj9c", "xn--hgbk6aj7f53bba", "xn--hlcj6aya9esc7a", "xn--j6w193g", "xn--jxalpdlp", "xn--kgbechtv", "xn--kprw13d", "xn--kpry57d", "xn--lgbbat1ad8j", "xn--mgbaam7a8h", "xn--mgbayh7gpa", "xn--mgbbh1a71e", "xn--mgbc0a9azcg", "xn--mgberp4a5d4ar", "xn--o3cw4h", "xn--ogbpf8fl", "xn--p1ai", "xn--pgbs0dh", "xn--s9brj9c", "xn--wgbh1c", "xn--wgbl6a", "xn--xkc2al3hye2a", "xn--xkc2dl3a5ee0h", "xn--yfro4i67o", "xn--ygbi2ammx", "xn--zckzah", "xxx", "ye", "yt", "za", "zm", "zw"].join()
 
 /**
  * Global Functions ============================================================================================================
@@ -1285,8 +1285,8 @@ function checkForMessageInterupts(message){
 }
 
 function checkForDomInterupts(dom, isPM, chanchar){
-    // Url links.
-    dom.children('.urllink').each(function(){
+    // Auto-opening url links.
+    /*dom.children('.urllink').each(function(){
         // If this url link is to a picture.
         var url = $(this).attr('title');
         var msg = $(this).text();
@@ -1294,8 +1294,63 @@ function checkForDomInterupts(dom, isPM, chanchar){
             // Push this item into the picture
             pushImageToPictures(url, character, msg); 
         }
-    });
+    });*/
     
+    console.log("checking for placeholders.");
+    
+    // Check for urlplaceholders.
+    dom.find('.messagetext').children('.urlplaceholder').each(function(){
+        console.log("found one.");
+        
+        // Get the url
+        var url = $(this).attr('title');
+        
+        // Is this a direct link to an image or video.
+        if(url.match(/\.(jpeg|jpg|gif|gifv|png|webm)$/) !== null){
+            // Is a direct image/video link.
+            if(url.match(/\.(jpeg|jpg|gif|gifv|png)$/) !== null){
+                // Create an image link.
+                var elem = $('<span class="imagelink" title="' + url + '"><span class="fa fa-image"></span>' + $(this).text() +'</span>');
+                $(this).after(elem);
+                $(this).remove();
+            }
+            else if(url.match(/\.(webm)$/)) {
+                // Create a video link.
+                var elem = $('<span class="videolink" title="' + url + '"><span class="fa fa-film"></span>' + $(this).text() + '</span>');
+                $(this).after(elem);
+                $(this).remove();
+            }
+            else {
+                pushFeedItem(App.consts.feed.types.error, 'URL matched one of our direct link extensions but could not determine which one.');
+                return;
+            }
+        }
+        
+        // Check for domains.
+        var uri = new URI(url);
+        var domain = uri.domain();
+        
+        if(domain === 'youtube.com'){
+            
+        }
+    });
+}
+
+function getBooruID(url){
+    var uri = new URI(url);
+    
+}
+
+function isImageViewerUrl(url){
+    return(url.match(/\.(jpeg|jpg|gif|png|webm)$/) != null);
+}
+
+function isImageUrl(url){
+    return(url.match(/\.(jpeg|jpg|gif|png)$/) != null);
+}
+
+function isWebmUrl(url){
+    return(url.match(/\.(webm)$/) != null);
 }
 
 function createChannelTextAreaOnKeyUpCallback(textArea, channel){
@@ -2333,23 +2388,23 @@ function arrayMove(array, from, to){
     array.splice(to, 0, array.splice(from, 1)[0]);
 }
 
-function lengthInUtf8Bytes(str){
-    // Matches only the 10.. bytes that are non-initial characters in a multi-byte sequence.
-    var m = encodeURIComponent(str).match(/%[89ABab]/g);
-    return str.length + (m ? m.length : 0);
+
+function checkUrlForPictureViewer(url){
+    if(url.match(/\.(jpeg|jpg|gif|png|gifv)$/) !== null){
+        return 'imagedirect';
+    }
+    else if(url.match(/\.(webm)$/) !== null){
+        return 'webmdirect';
+    }
+    else if(extractDomain(url) === 'youtube'){
+        return 'youtube';
+    }
+    else {
+        return 'none';
+    }
 }
 
-function isImageViewerUrl(url){
-    return(url.match(/\.(jpeg|jpg|gif|png|webm)$/) != null);
-}
 
-function isImageUrl(url){
-    return(url.match(/\.(jpeg|jpg|gif|png)$/) != null);
-}
-
-function isWebmUrl(url){
-    return(url.match(/\.(webm)$/) != null);
-}
 
 $.fn.selectRange = function(start, end) {
     if(end === undefined) {
@@ -3751,6 +3806,13 @@ function createDomToolPictures(){
 }
 
 function createDomToolPicturesEntry(url, sender, message){
+    // Fix GIFV urls.
+    var uri = new URI(url);
+    if(uri.suffix() === 'gifv'){
+        uri.suffix('gif');
+        url = uri.href();
+    }
+        
     var domMain = $('<div class="picturesentry" title="' + url + '"></div>');
    
     var domButtons = $('<div class="picturesentrybuttons"></div>');
@@ -3845,7 +3907,7 @@ function createDomImageOrVideo(url){
         dom =$('<img class="img-responsive" src="' + url + '"/>');
     }
     else if(isWebmUrl(url)){
-        dom = $('<video controls muted class="gfyVid" autoplay="" loop="" style="width: 100%; height: auto;"><source src="' + url + '" type="video/webm" class="webmsource"></video>');
+        dom = $('<video controls muted autoplay="" loop="" style="width: 100%; height: auto;"><source src="' + url + '" type="video/webm" class="webmsource"></video>');
     }    
     return dom;
 }
@@ -4882,7 +4944,39 @@ $(document).ready(function(){
         }
     });
     
+    // Future imagelinks
+    $(document).on('click', '.imagelink', function(e){
+        var url = $(this).attr('title');
+        var msg = $(this).text();
+        
+        // Check the message this element is in for an owner.
+        var owner = App.user.loggedInAs;
+        if(typeof $(this).parent().parent() !== 'undefined'){
+            var uEn = $(this).parent().parent().find('.imagelink');
+            if(typeof uEn !== 'undefined'){
+                owner = $(this).parent().parent().find('.userentry').attr('title');
+            }
+        }
+        
+        pushImageToPictures(url, owner, msg, true);
+    });
     
+    // Future videolinks.
+    $(document).on('click', '.videolink', function(e){
+        var url = $(this).attr('title');
+        var msg = $(this).text();
+        
+        // Check the message this element is in for an owner.
+        var owner = App.user.loggedInAs;
+        if(typeof $(this).parent().parent() !== 'undefined'){
+            var uEn = $(this).parent().parent().find('.videolink');
+            if(typeof uEn !== 'undefined'){
+                owner = $(this).parent().parent().find('.userentry').attr('title');
+            }
+        }
+        
+        pushImageToPictures(url, owner, msg, true);
+    });
         
     // Do we have session a cookie?
     var ckSession = cookie.get('session', 'none');
