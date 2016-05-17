@@ -1285,20 +1285,7 @@ function checkForMessageInterupts(message){
 }
 
 function checkForDomInterupts(dom, isPM, chanchar){
-    // Auto-opening url links.
-    /*dom.children('.urllink').each(function(){
-        // If this url link is to a picture.
-        var url = $(this).attr('title');
-        var msg = $(this).text();
-        if(isImageViewerUrl(url)){
-            // Push this item into the picture
-            pushImageToPictures(url, character, msg); 
-        }
-    });*/
-    
-    console.log("checking for placeholders.");
-    
-    // Check for urlplaceholders.
+    // Check for urlplaceholders given to us by XBBCODE.js and replace them.
     dom.find('.messagetext').children('.urlplaceholder').each(function(){
         console.log("found one.");
         
