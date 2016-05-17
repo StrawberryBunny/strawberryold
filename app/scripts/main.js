@@ -1290,13 +1290,13 @@ function checkForDomInterupts(dom, isPM, chanchar){
         // Is this a direct link to an image or video.
         if(url.match(/\.(jpeg|jpg|gif|gifv|png|webm)$/) !== null){
             // Is a direct image/video link.
-            if(url.match(/\.(jpeg|jpg|gif|gifv|png)$/) !== null){
+            if(isImageUrl(url)){
                 // Create an image link.
                 var elem = $('<span class="imagelink" title="' + url + '"><span class="fa fa-image"></span>' + $(this).text() +'</span>');
                 $(this).after(elem);
                 $(this).remove();
             }
-            else if(url.match(/\.(webm)$/)) {
+            else if(isVideoUrl(url)) {
                 // Create a video link.
                 var elem = $('<span class="videolink" title="' + url + '"><span class="fa fa-film"></span>' + $(this).text() + '</span>');
                 $(this).after(elem);
@@ -1309,10 +1309,7 @@ function checkForDomInterupts(dom, isPM, chanchar){
         }
         
         // Check for domains.
-        var uri = new URI(url);
-        var domain = uri.domain();
-        
-        if(domain === 'youtube.com'){
+        if(isYoutubeUrl(url)){
             // Can we find the youtube video ID?
             var videoID = youtube_parser(url);
             if(typeof videoID === 'undefined'){
@@ -1339,16 +1336,17 @@ function youtube_parser(url){
     return (match&&match[7].length==11)? match[7] : false;
 }
 
-function isImageViewerUrl(url){
-    return(url.match(/\.(jpeg|jpg|gif|png|webm)$/) != null);
-}
-
 function isImageUrl(url){
-    return(url.match(/\.(jpeg|jpg|gif|png)$/) != null);
+    return url.match(/\.(jpeg|jpg|gif|gifv|png)$/) !== null;
 }
 
-function isWebmUrl(url){
-    return(url.match(/\.(webm)$/) != null);
+function isVideoUrl(url){
+    return url.match(/\.(webm)$/) !== null;
+}
+
+function isYoutubeUrl(url){
+    var uri = new URI(url);
+    return uri.domain() === 'youtube.com' || uri.domain() === 'youtu.be';
 }
 
 function createChannelTextAreaOnKeyUpCallback(textArea, channel){
@@ -3814,12 +3812,13 @@ function createDomToolPictures(){
     domBtnAdd.click(function(){
         var inputVal = $('#toolpicturesinput').val();
         if(typeof inputVal === 'undefined' || inputVal.length === 0 || stripWhitespace(inputVal).length === 0){
-            console.log("Input val not workable: " + inputVal);
+            // Do nothing.
             return;
         }
         
         // Does the inputVal end with an image extension?
-        if(!isImageViewerUrl(inputVal)){
+        if(!isImageUrl(inputVal) && !isVideoUrl(inputVal) && !isYoutubeUrl(inputVal)){
+            pushFeedItem(App.consts.feed.types.error, 'The picture viewer can not handle this URL. The link must be direct to an image or webm video (jpg, jpeg, png, gif, gifv or webm) or a link to a youtube video.');
             return;
         }
         
@@ -3867,7 +3866,6 @@ function createDomToolPicturesEntry(url, sender, message){
         else {
             var isPublic = App.state.selectedChannel.substr(0, 3) !== 'ADH';
             var channels = isPublic ? App.publicChannels : App.privateChannels;
-            console.log("Channel: " + App.state.selectedChannel);
             textArea = channels[App.state.selectedChannel].textEntry.find('.textentrytextarea');
         }     
         
@@ -3948,13 +3946,13 @@ function createDomImageOrVideo(url){
     var uri = new URI(url);
     var domain = uri.domain();
     
-    if(imageExtensions.indexOf(uri.suffix()) !== -1){
+    if(isImageUrl(url)){
         dom =$('<img class="img-responsive" src="' + url + '"/>');
     }
-    else if(videoExtensions.indexOf(uri.suffix()) !== -1){
+    else if(isVideoUrl(url)){
         dom = $('<video controls muted autoplay="" loop="" style="width: 100%; height: auto;"><source src="' + url + '" type="video/webm" class="webmsource"></video>');
     }
-    else if(domain === 'youtube.com'){
+    else if(isYoutubeUrl(url)){
         var videoID = youtube_parser(url);
         dom = $('<iframe id="ytplayer" width="250" height="150" type="text/html" src="https://www.youtube.com/embed/' + videoID + '" frameborder="0" allowfullscreen></iframe>');
     }
