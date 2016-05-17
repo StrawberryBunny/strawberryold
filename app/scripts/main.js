@@ -1283,7 +1283,7 @@ function checkForMessageInterupts(message){
 
 function checkForDomInterupts(dom, isPM, chanchar){
     // Check for urlplaceholders given to us by XBBCODE.js and replace them.
-    dom.find('.messagetext').children('.urlplaceholder').each(function(){
+    dom.find('.messagetext').find('.urlplaceholder').each(function(){
         // Get the url
         var url = $(this).attr('title');
         
@@ -4281,7 +4281,7 @@ function createDomMessage(character, message, channel){
     var bb = XBBCODE.process({
         text: message
     });
-        
+    
     domContainer.append('<div class="messagetext">' + bb.html + '</div>');
 
     return domContainer;
