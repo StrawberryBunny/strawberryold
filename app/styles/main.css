@@ -331,9 +331,10 @@ html, body {
     padding-right: 10px;
 }
 
-.tooltopbar .fa {
+.tooltopbar .fa:not:first-child {
     margin-left: 20px;
 }
+
 
 /* Tool - Feed */
 .feedtopbar {
@@ -411,10 +412,6 @@ html, body {
     color: #e8b148;
 }
 
-.fmention {
-    
-}
-
 .feedcontainer {
     display: inline-table;
     width: 100%;
@@ -471,9 +468,6 @@ html, body {
     font-style: italic;
     color: #4f8de1;
 }
-
-
-
 
 
 /* Tool Panel - Status */
@@ -718,6 +712,8 @@ html, body {
 .toolpictures .tooltopbar input {
     font-size: 12px;
     width: 100%;
+    margin-left: 10px;
+    margin-right: 10px;
 }
 
 .toolpicturesscroller {
@@ -768,6 +764,13 @@ html, body {
     display: inline;
     word-wrap: break-word;
     white-space: pre-wrap;
+}
+
+.picturesentry iframe {
+    border-style: solid;
+    border-color: #000000;
+    border-width: 2px;
+    margin-top: 10px;
 }
 
 .picturesentrybuttons {
@@ -1069,6 +1072,19 @@ a:active {
     margin-right: 3px;
 }
 
+.videolink .fa-youtube-play {
+    margin-right: 3px;
+}
+
 input {
     color: #222222;
+}
+
+
+.youtubeiframe {
+    position: relative;
+    padding-bottom: 56.25%; /* 16/9 ratio */
+    padding-top: 30px; /* IE6 workaround*/
+    height: 0;
+    overflow: hidden;
 }

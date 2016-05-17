@@ -615,7 +615,6 @@ function loadOptionsCookie(){
     
     // Start-up channels.
     if(typeof ckOptions.startUpChannels !== 'undefined'){
-        //console.log("Start-up channels: " + ckOptions.startUpChannels);
         var str = '';
         for(var j = 0; j < ckOptions.startUpChannels.length; j++){
             if(ckOptions.startUpChannels[j].length > 0){
@@ -1123,7 +1122,7 @@ function closeChannel(name){
     // If this channel isn't in the list of open channels.
     if(App.state.openChannels.indexOf(name) === -1){
         //console.log('Error: Trying to close a channel that isn\'t open: ' + name);
-        console.log(JSON.stringify(App.state.openChannels));
+        //console.log(JSON.stringify(App.state.openChannels));
         pushFeedItem(App.consts.feed.types.error, 'Tried to close channel ' + name + ' when it isn\'t open.');
         return;
     }
@@ -1285,8 +1284,6 @@ function checkForMessageInterupts(message){
 function checkForDomInterupts(dom, isPM, chanchar){
     // Check for urlplaceholders given to us by XBBCODE.js and replace them.
     dom.find('.messagetext').children('.urlplaceholder').each(function(){
-        console.log("found one.");
-        
         // Get the url
         var url = $(this).attr('title');
         
@@ -1316,14 +1313,30 @@ function checkForDomInterupts(dom, isPM, chanchar){
         var domain = uri.domain();
         
         if(domain === 'youtube.com'){
+            // Can we find the youtube video ID?
+            var videoID = youtube_parser(url);
+            if(typeof videoID === 'undefined'){
+                pushFeedItem(App.consts.feed.types.error, 'Could not determine the Youtube video ID. Please check your URL.');
+                return;
+            }
             
+            var elem = $('<span class="videolink" title="' + url + '"><span class="fa fa-youtube-play"></span>' + $(this).text() + '</span>');
+                        
+            $(this).after(elem);
+            $(this).remove();
         }
+        
+        // Regular URL.
+        var elem = $('<span class="urllink" title="' + url + '"><span class="fa fa-link"></span>' + $(this).text() + '</span>');
+        $(this).after(elem);
+        $(this).remove();
     });
 }
 
-function getBooruID(url){
-    var uri = new URI(url);
-    
+function youtube_parser(url){
+    var regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#\&\?]*).*/;
+    var match = url.match(regExp);
+    return (match&&match[7].length==11)? match[7] : false;
 }
 
 function isImageViewerUrl(url){
@@ -2034,6 +2047,9 @@ function viewerUpdatePictures(data){
 
 /* Pictures */
 function pushImageToPictures(url, sender, message, showPictures){
+    // Is the pictures content showing a scrollbar already?
+    var isScrollingAlready = App.tools['pictures'].scrollerContent.height() > App.tools['pictures'].scroller.height();
+    
     var dom = createDomToolPicturesEntry(url, sender, message);
     App.tools['pictures'].scrollerContent.append(dom);
     if(showPictures && App.state.currentTool !== 'pictures'){
@@ -2045,6 +2061,16 @@ function pushImageToPictures(url, sender, message, showPictures){
     App.tools['pictures'].scroller.animate({
         scrollTop: App.tools['pictures'].scrollerContent.height()
     }, 2000);
+    
+    // Fit any youtube videos that have been added.
+    fitYoutubeVideos();
+    
+    // Now youtube videos have been sized, it may have pushed the pictures so large it's now scrolling.
+    var isScrollingNow = App.tools['pictures'].scrollerContent.height() > App.tools['pictures'].scroller.height();
+    if(!isScrollingAlready && isScrollingNow){
+        // Fit again.
+        fitYoutubeVideos();
+    }
 }
 
 /**
@@ -2179,6 +2205,9 @@ function layout(){
         $('.main').width(((containerWidth - 64) / containerWidth * 100) + '%');
         $('.toolpanel').width('0%');
     }
+    
+    // yt vids
+    fitYoutubeVideos();
 }
 
 function gotoNextChannel(){
@@ -2373,7 +2402,6 @@ function arrayMove(array, from, to){
     array.splice(to, 0, array.splice(from, 1)[0]);
 }
 
-
 function checkUrlForPictureViewer(url){
     if(url.match(/\.(jpeg|jpg|gif|png|gifv)$/) !== null){
         return 'imagedirect';
@@ -2389,6 +2417,18 @@ function checkUrlForPictureViewer(url){
     }
 }
 
+function fitYoutubeVideos(){
+    // Loop through all picturesentry elems
+    $('.picturesentry').each(function(){
+       var ifr = $(this).find('#ytplayer');
+       var wid = $(this).width();
+       var hei = wid * 9 / 16;
+              
+       // Set              
+       ifr.css('width', wid + 'px');
+       ifr.css('height', hei + 'px');
+    });
+}
 
 
 $.fn.selectRange = function(start, end) {
@@ -3756,7 +3796,17 @@ function createDomToolPictures(){
     var domTitleBar = $('<div class="tooltopbar"></div>');
     App.tools['pictures'].content.append(domTitleBar);
     
-    var domInput = $('<input id="toolpicturesinput" type="text" placeholder="Add URLs here"></input>');
+    var domTrashAll = $('<span class="faicon fa fa-trash" title="Trash All"></span>');
+    domTitleBar.append(domTrashAll);
+    domTrashAll.click(function(){
+        App.tools['pictures'].scrollerContent.find('.picturesentry').each(function(){
+            $(this).slideUp(function(){
+                $(this).remove();
+            });
+        });
+    });
+    
+    var domInput = $('<input id="toolpicturesinput" type="text" placeholder="Add your own URLs here"></input>');
     domTitleBar.append(domInput);
     
     var domBtnAdd = $('<span class="faicon fa fa-plus" title="Add Image"></span>');
@@ -3815,8 +3865,9 @@ function createDomToolPicturesEntry(url, sender, message){
             textArea = App.dom.noChannelTextEntry.find('.textentrytextarea');
         }
         else {
-            var isPublic = App.state.selectedChannel !== 'ADH';
+            var isPublic = App.state.selectedChannel.substr(0, 3) !== 'ADH';
             var channels = isPublic ? App.publicChannels : App.privateChannels;
+            console.log("Channel: " + App.state.selectedChannel);
             textArea = channels[App.state.selectedChannel].textEntry.find('.textentrytextarea');
         }     
         
@@ -3869,6 +3920,7 @@ function createDomToolPicturesEntry(url, sender, message){
     domBtnClose.click(function(){
         $(this).parent().parent().parent().slideUp(function(){
             $(this).remove();
+            fitYoutubeVideos();
         });
     });
     
@@ -3883,17 +3935,29 @@ function createDomToolPicturesEntry(url, sender, message){
     var domImage = createDomImageOrVideo(url);
     domMain.append(domImage);
     
+        
     return domMain;
 }
 
 function createDomImageOrVideo(url){
     var dom;
-    if(isImageUrl(url)){
+    
+    var imageExtensions = ['jpg', 'jpeg', 'gif', 'gifv', 'png', 'bmp'];
+    var videoExtensions = ['webm'];
+    
+    var uri = new URI(url);
+    var domain = uri.domain();
+    
+    if(imageExtensions.indexOf(uri.suffix()) !== -1){
         dom =$('<img class="img-responsive" src="' + url + '"/>');
     }
-    else if(isWebmUrl(url)){
+    else if(videoExtensions.indexOf(uri.suffix()) !== -1){
         dom = $('<video controls muted autoplay="" loop="" style="width: 100%; height: auto;"><source src="' + url + '" type="video/webm" class="webmsource"></video>');
-    }    
+    }
+    else if(domain === 'youtube.com'){
+        var videoID = youtube_parser(url);
+        dom = $('<iframe id="ytplayer" width="250" height="150" type="text/html" src="https://www.youtube.com/embed/' + videoID + '" frameborder="0" allowfullscreen></iframe>');
+    }
     return dom;
 }
 
