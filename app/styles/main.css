@@ -738,6 +738,10 @@ html, body {
     text-align: left;
 }
 
+.picturesentry video {
+    
+}
+
 .picturesentry:not(:last-child) {
     margin-bottom: 10px;
 }
@@ -1078,13 +1082,4 @@ a:active {
 
 input {
     color: #222222;
-}
-
-
-.youtubeiframe {
-    position: relative;
-    padding-bottom: 56.25%; /* 16/9 ratio */
-    padding-top: 30px; /* IE6 workaround*/
-    height: 0;
-    overflow: hidden;
 }

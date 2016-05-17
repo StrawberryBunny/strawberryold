@@ -3921,19 +3921,18 @@ function createDomToolPicturesEntry(url, sender, message){
             fitYoutubeVideos();
         });
     });
-    
+     
     var domTitle = $(createDomUserEntry(sender, App.characters[sender].gender, App.characters[sender].status, App.characters[sender].statusmsg));
     domMain.append(domTitle);
     
     if(typeof message !== 'undefined'){
         var domMessage = $('<div>: ' + message + '</div>');
         domMain.append(domMessage);
-    }
-        
+    } 
+            
     var domImage = createDomImageOrVideo(url);
     domMain.append(domImage);
     
-        
     return domMain;
 }
 

@@ -94,7 +94,7 @@ gulp.task('serve', ['styles', 'scripts', 'fonts'], () => {
         '/bower_components': 'bower_components'
       }
     },
-    /* Uncommenting this disables browsersync to allow for cross-browser testing.
+    /* Uncommenting this disables browsersync to allow for cross-browser testing. MUST PERFORM HARD-REFRESH (Shift+Refresh) FOR CHANGES TO TAKE EFFECT!
     snippetOptions: {
       rule: {
         match: /qqqqqqqqq/
