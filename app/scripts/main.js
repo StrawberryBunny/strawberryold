@@ -696,6 +696,12 @@ function sendMessage(message, isPM, chanchar){
     }
     
     if(isPM){
+        // Are we sure this user is online?
+        if(App.characters[chanchar].status === 'offline'){
+            pushFeedItem(App.consts.feed.error, 'Sorry. ' + chanchar + ' has gone offline.');
+            return false;
+        }
+        
         // Send message to server
         sendMessageToServer('PRI { "recipient": "' + chanchar + '", "message": "' + escapeJson(serverMessage) + '" }');
         
@@ -3953,7 +3959,7 @@ function createDomImageOrVideo(url){
     }
     else if(isYoutubeUrl(url)){
         var videoID = youtube_parser(url);
-        dom = $('<iframe id="ytplayer" width="250" height="150" type="text/html" src="https://www.youtube.com/embed/' + videoID + '" frameborder="0" allowfullscreen></iframe>');
+        dom = $('<iframe id="ytplayer" width="250" height="150" src="https://www.youtube.com/embed/' + videoID + '" frameborder="0" allowfullscreen></iframe>');
     }
     return dom;
 }
