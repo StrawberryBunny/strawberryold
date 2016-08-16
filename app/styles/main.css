@@ -533,6 +533,13 @@ html, body {
     position: relative;
 }
 
+.channellistspanholder {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    width: 100%;
+}
+
 .selected {
     background-color: #ea4933;
 }
@@ -651,6 +658,10 @@ html, body {
 
 .toolviewerarea {
     padding: 10px;
+}
+
+.toolviewerarea p {
+    white-space: pre-wrap;
 }
 
 .toolviewerthumb {

@@ -3112,11 +3112,14 @@ function createDomToolChannelList(){
 function createDomChannelListEntry(channelName, channelTitle, characterCount){
     var domContainer = $('<div class="channellistentry"></div>');
 
+    var domSpanHolder = $('<div class="channellistspanholder"></div>');
+    domContainer.append(domSpanHolder);
+
     var domRoomName = $('<span>' + channelTitle + '</span>');
-    domContainer.append(domRoomName);
+    domSpanHolder.append(domRoomName);
 
     var domCharCount = $('<span id="charcount">' + characterCount + '</span>');
-    domContainer.append(domCharCount);
+    domSpanHolder.append(domCharCount);
 
     var domHidden = $('<span id="data" title="' + channelName + '" style="display: none;"></span>');
     domContainer.append(domHidden);

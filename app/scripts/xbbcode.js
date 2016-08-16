@@ -469,6 +469,7 @@ var XBBCODE = (function() {
                 return '</span>';
             }
         },
+        */
         "ul": {
             openTag: function(params,content) {
                 return '<ul>';
@@ -477,8 +478,7 @@ var XBBCODE = (function() {
                 return '</ul>';
             },
             restrictChildrenTo: ["*", "li"]
-        },
-        */
+        },        
         "url": {
 			openTag: function(params,content) {
 				var url;
