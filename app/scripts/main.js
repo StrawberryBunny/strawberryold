@@ -2526,7 +2526,7 @@ function postForBookmarks(){
 
 function postForCharacter(character){
 	$.post('https://www.f-list.net/json/api/character-get.php',
-		'name=' + escapeHtml(character).toLowerCase(),
+		'name=' + escapeHtml(character).toLowerCase() + '&ticket=' + App.user.ticket + '&account=' + App.user.account,
 		function(data){
 			viewerUpdateCharacterBasic(data);
             postForCharacterInfo(character);

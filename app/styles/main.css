@@ -335,6 +335,10 @@ html, body {
     margin-left: 20px;
 }
 
+.tooltopbar .feedmainbuttons .faicon {
+    margin-left: 10px;
+}
+
 
 /* Tool - Feed */
 .feedtopbar {
@@ -845,6 +849,8 @@ html, body {
 
 .userentry img {
     padding-right: 4px;
+    min-height: 9px;
+    min-width: 9px;
 }
 
 .userentry .fa-keyboard-o {
@@ -1007,6 +1013,7 @@ a:active {
 
 
 .sessionlink {
+    display: inline-block;
     cursor: pointer;
     text-decoration: underline;
 }
@@ -1017,6 +1024,7 @@ a:active {
 }
 
 .userlink {
+    display: inline-block;
     cursor: pointer;
     text-decoration: underline;
 }
@@ -1031,6 +1039,7 @@ a:active {
 }
 
 .urllink {
+    display: inline-block;
     cursor: pointer;
     text-decoration: underline;
 }
@@ -1049,6 +1058,7 @@ a:active {
 }
 
 .imagelink {
+    display: inline-block;
     cursor: pointer;
     text-decoration: underline;
 }
@@ -1063,6 +1073,7 @@ a:active {
 }
 
 .videolink {
+    display: inline-block;
     cursor: pointer;
     text-decoration: underline;
 }
