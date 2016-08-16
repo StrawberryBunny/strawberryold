@@ -85,7 +85,7 @@ var App = {
         }
     },
     consts: {
-        version: '0.5',
+        version: 'r0v6',
         logInTimeout: 2500,
         icons: {
             loading: [
@@ -180,10 +180,11 @@ var App = {
 		timestamps: true
 	},
     changelog: [
-        ['0.2', ['First changelog! Woo!', 'Nothing\'s really changed yet, though.', 'Moved from a simple notepad++ set-up to using Gulp to build my files and Bower for dependency management.']],
-        ['0.3', ['Channel buttons now include a label.', 'Locked and unlocked rooms now display.', 'Implemented /makeroom, /openroom, /code, /invite and /setdescription commands for private channels.', 'Various sweeping fixus and tweaks.']],
-        ['0.4', ['Fix for scrollbars at the bottom jumping up a little when the tool panel is opened.', 'Fix for users entering/leaving rooms messing up the userlist.', 'Userlists now sort better.', 'Fix for channel labels overflowing buttons.', 'Fixed channel list not updating correctly when users join a channel', 'Fix for channel buttons not stopping flashing when selected.', 'User\'s own messages now highlighted.', 'Feed messages now appear in the active channel.', 'Fix for viewer scrolling to memo strangeness.', 'Site title now updates to show logged in character and number of unread messages.', 'Fix for Male-Herm and Cunt-boy. We forgot about the dashes.', 'Fix for open channel buttons not being visiable after closing some when the list is scrolled down.']],
-        ['0.5', ['Fix to stop status update button being clicked during timeout phase.', 'Max lengths added to text entries.', 'Message flood prevention implemented.', 'Closing feed messages now closes all instances of that message.', 'WebM videos added to picture viewer']]
+        ['r0v2', ['First changelog! Woo!', 'Nothing\'s really changed yet, though.', 'Moved from a simple notepad++ set-up to using Gulp to build my files and Bower for dependency management.']],
+        ['r0v3', ['Channel buttons now include a label.', 'Locked and unlocked rooms now display.', 'Implemented /makeroom, /openroom, /code, /invite and /setdescription commands for private channels.', 'Various sweeping fixus and tweaks.']],
+        ['r0v4', ['Fix for scrollbars at the bottom jumping up a little when the tool panel is opened.', 'Fix for users entering/leaving rooms messing up the userlist.', 'Userlists now sort better.', 'Fix for channel labels overflowing buttons.', 'Fixed channel list not updating correctly when users join a channel', 'Fix for channel buttons not stopping flashing when selected.', 'User\'s own messages now highlighted.', 'Feed messages now appear in the active channel.', 'Fix for viewer scrolling to memo strangeness.', 'Site title now updates to show logged in character and number of unread messages.', 'Fix for Male-Herm and Cunt-boy. We forgot about the dashes.', 'Fix for open channel buttons not being visiable after closing some when the list is scrolled down.']],
+        ['r0v5', ['Fix to stop status update button being clicked during timeout phase.', 'Max lengths added to text entries.', 'Message flood prevention implemented.', 'Closing feed messages now closes all instances of that message.', 'WebM videos added to picture viewer']],
+        ['r0v6', ['Returned to project after hiatus. Fixed up some layout issues on Firefox. Fixed character viewer no longer working. Needs ticket information now.']]
     ],
     commands: [
         {
@@ -540,7 +541,7 @@ function checkForReadyStatus(){
         
         // Set the loading texts
         $('#loadingtext').text('Log in successful!');
-        $('#loadingtext2').text('Enjoy using Strawberry v' + App.consts.version + '!');
+        $('#loadingtext2').text('Enjoy using Strawberry ' + App.consts.version + '!');
         
         // Replace hand
         $('.loginloadingcontent span').removeClass();
