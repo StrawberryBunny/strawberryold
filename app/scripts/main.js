@@ -4334,11 +4334,11 @@ function openWebSocket(account, ticket, characterName){
 
     // Test
     //App.connection = new WebSocket('ws://chat.f-list.net:8722'); // Test Server    
-    //App.connection = new WebSocket('wss://chat.f-list.net:8799'); // Test Server
+    App.connection = new WebSocket('wss://chat.f-list.net:8799'); // Test Server
 
     // Official
     //App.connection = new WebSocket('ws://chat.f-list.net:9722'); // Proper Server (Unencrypted)
-    App.connection = new WebSocket('wss://chat.f-list.net:9799'); // Proper Server (Encrypted)
+    //App.connection = new WebSocket('wss://chat.f-list.net:9799'); // Proper Server (Encrypted)
    
 
     // Add listeners
