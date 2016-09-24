@@ -956,6 +956,8 @@ function selectChannel(name){
 
     // Turn on the new channel.
     if(name === ''){
+        // Show the no-channel stuff.
+
         // Attach the no channel bg
         App.dom.channelContents.append(App.dom.noChannelWrapper);
                 
@@ -1082,14 +1084,7 @@ function openChannel(name){
 
     // Sort the userlist.
     sortUserList(name);
-
-    // (Re)Create the userlist
-    channels[name].userlistDom.empty();
-    for(var i = 0; i < channels[name].users.length; i++){
-        var charName = channels[name].users[i];
-        var dom = createDomUserEntry(charName, App.characters[charName].gender, App.characters[charName].status, App.characters[charName].statusmsg, false, name);
-        channels[name].userlistDom.append(dom);
-    }
+    addUserEntryDomsToUserListDom(channels, name);
         
     // How do I know if this room is private & locked?    
         
@@ -1119,6 +1114,7 @@ function openChannel(name){
         nameplate.attr('title', App.characters[character].statusmsg);
     });
     
+
 }
 
 function leaveChannel(name){
@@ -1232,18 +1228,31 @@ function characterJoinedChannel(character, channel){
     channels[channel].users.push(character);
     channels[channel].users.sort();
     
+    /**
+     * This method of trying to place the user in at the right place isn't working.
+     */
+
     // Figure out which userlistentry (that's already in the dom) comes before the one we want to add.
+    /*
     var newIndex = channels[channel].users.indexOf(character);
     var prevIndex = newIndex - 1;
     if(prevIndex < 0){
         prevIndex = 0;
-    }
+    }*/
     
     // Create dom.
     var dom = createDomUserEntry(character, App.characters[character].gender, App.characters[character].status, App.characters[character].statusmsg, false, channel);
     
     // Get the userentry at the index we found and append this new user entry after it.
+    /*
     channels[channel].userlistDom.find('.userentry').eq(prevIndex).after(dom);
+    */
+    
+    // Just add the dom to the list and then sort
+    channels[channel].userlistDom.append(dom);
+    sortUserList(channel);
+
+    addUserEntryDomsToUserListDom(channels, channel);
         
     // Update this channel's entry in the channel list. (The room is private and not opened it won't be in the channel list.)
     if(typeof channels[channel].listEntry !== 'undefined'){
@@ -2316,6 +2325,18 @@ function sortUserList(channelName){
 			else return 0;
 		}		
     });
+
+    
+}
+
+function addUserEntryDomsToUserListDom(channels, channelName){
+    // (Re)Create the userlist
+    channels[channelName].userlistDom.empty();
+    for(var i = 0; i < channels[channelName].users.length; i++){
+        var charName = channels[channelName].users[i];
+        var dom = createDomUserEntry(charName, App.characters[charName].gender, App.characters[charName].status, App.characters[charName].statusmsg, false, channelName);
+        channels[channelName].userlistDom.append(dom);
+    }
 }
 
 function fixGender(genderFromServer){
@@ -2529,6 +2550,7 @@ function postForCharacter(character){
 	$.post('https://www.f-list.net/json/api/character-get.php',
 		'name=' + escapeHtml(character).toLowerCase() + '&ticket=' + App.user.ticket + '&account=' + App.user.account,
 		function(data){
+            console.log(data);
 			viewerUpdateCharacterBasic(data);
             postForCharacterInfo(character);
 		}
@@ -3430,7 +3452,6 @@ function createDomToolFeedMessage(type, id, message, sender){
             
             $(this).fadeOut();
         });
-        
         var domUserEntry = createDomUserEntry(sender, App.characters[sender].gender, App.characters[sender].status, App.characters[sender].statusmsg);
         domMessage.append(domUserEntry);
     }
@@ -4265,7 +4286,7 @@ function createDomMessage(character, message, channel){
     else {
         var gender = App.characters[character].gender;
         var status = App.characters[character].status;
-        var statusmsg = App.characters[character].statusmsg;
+        var statusmsg = App.characters[character].statusmsg;        
         var userEntry = createDomUserEntry(character, gender, status, statusmsg, isMe, channel);
         domContainer.append(userEntry);
         if(!isMe){
@@ -4309,9 +4330,16 @@ function sendMessageToServer(message){
 }
 
 function openWebSocket(account, ticket, characterName){
-    // Create websocket
-    App.connection = new WebSocket('ws://chat.f-list.net:8722'); // Test Server
-    //App.connection = new WebSocket('ws://chat.f-list.net:9722'); // Proper Server
+    // Websockets
+
+    // Test
+    //App.connection = new WebSocket('ws://chat.f-list.net:8722'); // Test Server    
+    //App.connection = new WebSocket('wss://chat.f-list.net:8799'); // Test Server
+
+    // Official
+    //App.connection = new WebSocket('ws://chat.f-list.net:9722'); // Proper Server (Unencrypted)
+    App.connection = new WebSocket('wss://chat.f-list.net:9799'); // Proper Server (Encrypted)
+   
 
     // Add listeners
     App.connection.onopen = function(){
